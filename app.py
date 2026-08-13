@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 st.set_page_config(page_title="Railway Earning Dashboard", layout="wide")
 
 # Supabase Connection
-SUPABASE_URL = "postgresql://postgres:YOUR_PASSWORD_HERE@db.xxxxxxx.supabase.co:5432/postgres"
+SUPABASE_URL = "postgresql://postgres:pamcelllko@2234723@db.ggrpypensvabbvpyzqbx.supabase.co:5432/postgres"
 
 @st.cache_resource
 def get_database_connection():
