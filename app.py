@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 # Page Configuration
 st.set_page_config(page_title="Railway Earning Dashboard", layout="wide")
@@ -31,19 +31,25 @@ st.title("🚄 Station Earning & Traffic Executive Dashboard")
 # ----------------- SIDEBAR FILTERS -----------------
 st.sidebar.header("🔍 Filter Options")
 
-# Fetch Available Stations
+# Fetch Available Stations (Lower case query for Postgres safety)
 try:
-    stations = pd.read_sql("SELECT DISTINCT station_cod FROM booking", engine)['station_cod'].tolist()
+    with engine.connect() as conn:
+        stations_df = pd.read_sql(text('SELECT DISTINCT "station_cod" FROM booking'), conn)
+        stations = stations_df['station_cod'].dropna().unique().tolist()
+    
     selected_station = st.sidebar.selectbox("Select Station", sorted(stations))
 except Exception as e:
-    st.error("Error loading stations. Please check database connection.")
+    st.error(f"Error loading stations: {e}")
     st.stop()
 
 # Fetch Available Sessions
-sessions = pd.read_sql("SELECT DISTINCT session FROM booking ORDER BY session DESC", engine)['session'].tolist()
+with engine.connect() as conn:
+    sessions_df = pd.read_sql(text('SELECT DISTINCT "session" FROM booking ORDER BY "session" DESC'), conn)
+    sessions = sessions_df['session'].dropna().tolist()
+
 selected_session = st.sidebar.selectbox("Select Current Session", sessions)
 
-# Previous Session Logic (e.g. 202425 -> 202324)
+# Previous Session Logic
 curr_yr = int(selected_session[:4])
 prev_session = f"{curr_yr - 1:04d}{int(selected_session[4:]) - 1:02d}"
 
@@ -62,22 +68,25 @@ elif filter_type == "Full Year":
 else:
     selected_months = st.sidebar.multiselect("Select Months", list(MONTH_DAYS.keys()), default=['Apr', 'May', 'Jun'])
 
-# Calculate Total Days
 total_days = sum([MONTH_DAYS.get(m, 30) for m in selected_months])
 
-# ----------------- DATA FETCHING & COMPUTATION -----------------
+# ----------------- DATA FETCHING -----------------
 def fetch_head_earning(table_name, station, session, months, earning_col='earning'):
     months_str = "','".join(months)
-    query = f"""
-        SELECT SUM({earning_col}) as total_earning 
+    query = f'''
+        SELECT SUM("{earning_col}") as total_earning 
         FROM {table_name} 
-        WHERE station_cod = '{station}' 
-          AND session = '{session}' 
-          AND month IN ('{months_str}')
-    """
-    df = pd.read_sql(query, engine)
-    val = df['total_earning'].iloc[0]
-    return float(val) if val is not None else 0.0
+        WHERE "station_cod" = '{station}' 
+          AND "session" = '{session}' 
+          AND "month" IN ('{months_str}')
+    '''
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql(text(query), conn)
+            val = df['total_earning'].iloc[0]
+            return float(val) if pd.notnull(val) else 0.0
+    except Exception:
+        return 0.0
 
 # Current Year Earnings
 booking_curr = fetch_head_earning('booking', selected_station, selected_session, selected_months, 'earning')
@@ -85,7 +94,7 @@ prs_curr = fetch_head_earning('reservation_org', selected_station, selected_sess
 goods_curr = fetch_head_earning('goods', selected_station, selected_session, selected_months, 'ow_friegh')
 parcel_curr = fetch_head_earning('parcel', selected_station, selected_session, selected_months, 'ow_friegh')
 
-# Last Year Earnings (Corresponding Period)
+# Last Year Earnings
 booking_prev = fetch_head_earning('booking', selected_station, prev_session, selected_months, 'earning')
 prs_prev = fetch_head_earning('reservation_org', selected_station, prev_session, selected_months, 'earnings')
 goods_prev = fetch_head_earning('goods', selected_station, prev_session, selected_months, 'ow_friegh')
@@ -118,9 +127,13 @@ st.divider()
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["Booking", "PRS Org", "Goods", "Parcel", "Reservation"])
 
 def show_tab_data(table_name):
-    q = f"SELECT * FROM {table_name} WHERE station_cod = '{selected_station}' AND session = '{selected_session}'"
-    df = pd.read_sql(q, engine)
-    st.dataframe(df, use_container_width=True)
+    q = f'SELECT * FROM {table_name} WHERE "station_cod" = \'{selected_station}\' AND "session" = \'{selected_session}\''
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql(text(q), conn)
+            st.dataframe(df, use_container_width=True)
+    except Exception as e:
+        st.warning(f"No data available or error: {e}")
 
 with tab1: show_tab_data('booking')
 with tab2: show_tab_data('reservation_org')
