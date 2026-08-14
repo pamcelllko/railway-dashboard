@@ -28,8 +28,9 @@ st.markdown("""
 # Helper function for Indian Currency/Number Format
 def format_inr(number):
     try:
-        if pd.isna(number): return "0"
-        s, *d = str(f"{float(number):.0f}").partition(".")
+        if pd.isna(number) or number is None: return "0"
+        val = float(number)
+        s, *d = str(f"{val:.0f}").partition(".")
         r = ",".join([s[x-2:x] for x in range(3, len(s)+1, 2)][::-1] + [s[-3:]])
         return "".join([r] + d) if len(s) > 3 else s
     except Exception:
@@ -64,15 +65,15 @@ try:
     with engine.connect() as conn:
         stns = sorted(pd.read_sql(text('SELECT DISTINCT "STATION_CODE" FROM booking'), conn)['STATION_CODE'].dropna().unique().tolist())
     selected_station = st.sidebar.selectbox("Select Station", stns if stns else ['SHG'])
-except Exception as e:
+except Exception:
     selected_station = 'SHG'
 
-# Hardcoded standard sessions to fix NULL/Empty session issue in DB
-formatted_sessions = ["2026-27", "2025-26", "2024-25"]
-selected_fmt_session = st.sidebar.selectbox("Select Session", formatted_sessions)
+# Sessions mapping
+session_options = ["2026-27", "2025-26", "2024-25"]
+selected_fmt_session = st.sidebar.selectbox("Select Session", session_options)
 
-curr_yr = int(selected_fmt_session.split('-')[0])
-prev_fmt_session = f"{curr_yr - 1}-{str(curr_yr)[2:]}"
+# Convert 2026-27 -> 202627 for Database Query
+raw_session = selected_fmt_session.replace("-", "")
 
 # Time Filter Options
 filter_type = st.sidebar.radio("Time Filter Type", ["Quarterly", "6 Months", "Full Year", "Last 3 Months", "Last 6 Months", "Custom Months"])
@@ -100,14 +101,15 @@ else:
 total_days = sum([MONTH_DAYS.get(m, 30) for m in selected_months])
 
 # ----------------- DATA FETCHING -----------------
-def fetch_data_robust(table_name, station, months):
+def fetch_data_strict(table_name, station, session_str, months):
     if not months: return pd.DataFrame()
     months_str = "','".join(months)
     
-    # Query without forcing strict SESSION match to prevent NULL loss
+    # Matching Session as String / Number prefix to handle all database types
     q = f'''
         SELECT * FROM {table_name} 
         WHERE "STATION_CODE" = '{station}' 
+          AND CAST("SESSION" AS TEXT) LIKE '{session_str}%'
           AND "MONTH" IN ('{months_str}')
     '''
     try:
@@ -117,31 +119,24 @@ def fetch_data_robust(table_name, station, months):
     except Exception:
         return pd.DataFrame()
 
-df_booking = fetch_data_robust('booking', selected_station, selected_months)
-df_prs_org = fetch_data_robust('reservation_org', selected_station, selected_months)
-df_goods = fetch_data_robust('goods', selected_station, selected_months)
-df_parcel = fetch_data_robust('parcel', selected_station, selected_months)
+df_booking = fetch_data_strict('booking', selected_station, raw_session, selected_months)
+df_prs_org = fetch_data_strict('reservation_org', selected_station, raw_session, selected_months)
+df_goods = fetch_data_strict('goods', selected_station, raw_session, selected_months)
+df_parcel = fetch_data_strict('parcel', selected_station, raw_session, selected_months)
 
 # Metric Calculations
-b_ear_curr = df_booking['EARNING'].sum() if 'EARNING' in df_booking.columns else 0.0
-b_pass_curr = df_booking['PASSENGERS'].sum() if 'PASSENGERS' in df_booking.columns else 0.0
+b_ear_curr = df_booking['EARNING'].sum() if 'EARNING' in df_booking.columns and not df_booking.empty else 0.0
+b_pass_curr = df_booking['PASSENGERS'].sum() if 'PASSENGERS' in df_booking.columns and not df_booking.empty else 0.0
 
-p_ear_curr = df_prs_org['EARNINGS'].sum() if 'EARNINGS' in df_prs_org.columns else 0.0
-p_pass_curr = df_prs_org['PASSENGERS'].sum() if 'PASSENGERS' in df_prs_org.columns else 0.0
+p_ear_curr = df_prs_org['EARNINGS'].sum() if 'EARNINGS' in df_prs_org.columns and not df_prs_org.empty else 0.0
+p_pass_curr = df_prs_org['PASSENGERS'].sum() if 'PASSENGERS' in df_prs_org.columns and not df_prs_org.empty else 0.0
 
-g_ear_curr = df_goods['OW_FRIEGHT'].sum() if 'OW_FRIEGHT' in df_goods.columns else 0.0
-pr_ear_curr = df_parcel['OW_FRIEGHT'].sum() if 'OW_FRIEGHT' in df_parcel.columns else 0.0
+g_ear_curr = df_goods['OW_FRIEGHT'].sum() if 'OW_FRIEGHT' in df_goods.columns and not df_goods.empty else 0.0
+pr_ear_curr = df_parcel['OW_FRIEGHT'].sum() if 'OW_FRIEGHT' in df_parcel.columns and not df_parcel.empty else 0.0
 
 # Combined Passenger
 comb_pass_curr = b_pass_curr + p_pass_curr
 comb_ear_curr = b_ear_curr + p_ear_curr
-
-# Dummy prev for ratio comparison
-b_ear_prev = b_ear_curr * 0.85
-p_ear_prev = p_ear_curr * 0.90
-g_ear_prev = g_ear_curr * 1.0
-pr_ear_prev = pr_ear_curr * 0.92
-comb_ear_prev = b_ear_prev + p_ear_prev
 
 # ----------------- DISPLAY METRICS -----------------
 st.markdown(f"### 📍 Station: **{selected_station}** | Session: **{selected_fmt_session}** | Months: **{', '.join(selected_months)}**")
@@ -149,7 +144,6 @@ st.markdown(f"### 📍 Station: **{selected_station}** | Session: **{selected_fm
 c1, c2, c3, c4, c5 = st.columns([1.2, 1, 1, 1, 1])
 
 with c1:
-    comb_growth = ((comb_ear_curr - comb_ear_prev) / comb_ear_prev * 100) if comb_ear_prev > 0 else 0
     pass_per_day = comb_pass_curr / total_days if total_days > 0 else 0
     ear_per_day = comb_ear_curr / total_days if total_days > 0 else 0
     
@@ -161,15 +155,15 @@ with c1:
         </div>
     """, unsafe_allow_html=True)
 
-def metric_box(col, title, curr, prev, days):
+def metric_box(col, title, curr, days):
     per_day = curr / days if days > 0 else 0
     col.metric(label=title, value=f"₹ {format_inr(curr)}")
     col.caption(f"⏱️ **Ear/Day:** ₹ {format_inr(per_day)}")
 
-metric_box(c2, "Booking (Ear)", b_ear_curr, b_ear_prev, total_days)
-metric_box(c3, "PRS_ORG (Ear)", p_ear_curr, p_ear_prev, total_days)
-metric_box(c4, "Goods Freight", g_ear_curr, g_ear_prev, total_days)
-metric_box(c5, "Parcel Freight", pr_ear_curr, pr_ear_prev, total_days)
+metric_box(c2, "Booking (Ear)", b_ear_curr, total_days)
+metric_box(c3, "PRS_ORG (Ear)", p_ear_curr, total_days)
+metric_box(c4, "Goods Freight", g_ear_curr, total_days)
+metric_box(c5, "Parcel Freight", pr_ear_curr, total_days)
 
 st.markdown("---")
 
@@ -180,7 +174,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 
 def render_table_clean(df, title):
     if df.empty:
-        st.info(f"No records found for {title}.")
+        st.info(f"No records found for {title} in session {selected_fmt_session}.")
         return
         
     drop_cols = ['STATION_CODE', 'SESSION', 'station_code', 'session']
@@ -223,7 +217,7 @@ with tab3:
 with tab4: render_table_clean(df_goods, "Goods")
 with tab5: render_table_clean(df_parcel, "Parcel")
 with tab6:
-    df_res = fetch_data_robust('reservation', selected_station, selected_months)
+    df_res = fetch_data_strict('reservation', selected_station, raw_session, selected_months)
     if 'NET_CASH' in df_res.columns:
         df_res = df_res.rename(columns={'NET_CASH': 'EARNING (NET_CASH)'})
     render_table_clean(df_res, "Reservation")
