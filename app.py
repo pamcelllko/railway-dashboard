@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import locale
 from sqlalchemy import create_engine, text
 
 # Page Configuration
@@ -9,15 +10,30 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+# Custom CSS for compact layout
 st.markdown("""
     <style>
         .block-container { padding-top: 1rem !important; padding-bottom: 0rem !important; }
-        div[data-testid="stMetricValue"] { font-size: 1.4rem !important; }
+        div[data-testid="stMetricValue"] { font-size: 1.25rem !important; }
+        .combined-card {
+            background-color: #f0f2f6;
+            border-radius: 8px;
+            padding: 10px 14px;
+            border-left: 5px solid #ff4b4b;
+        }
         .stTabs [data-baseweb="tab-list"] { gap: 6px; }
         .stTabs [data-baseweb="tab"] { padding-top: 4px; padding-bottom: 4px; }
     </style>
 """, unsafe_allow_html=True)
+
+# Helper function for Indian Currency/Number Format
+def format_inr(number):
+    try:
+        s, *d = str(f"{number:.0f}").partition(".")
+        r = ",".join([s[x-2:x] for x in range(3, len(s)+1, 2)][::-1] + [s[-3:]])
+        return "".join([r] + d) if len(s) > 3 else s
+    except Exception:
+        return f"{number:,.0f}"
 
 # Supabase Connection
 SUPABASE_URL = "postgresql://postgres.ggrpypensvabbvpyzqbx:pamcelllko2234723@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
@@ -47,7 +63,7 @@ def parse_session(fmt_s):
 
 st.title("🚄 Station Earning & Traffic Executive Dashboard")
 
-# ----------------- SIDEBAR -----------------
+# ----------------- SIDEBAR FILTERS -----------------
 st.sidebar.header("🔍 Filter Options")
 
 # Fetch Stations
@@ -68,7 +84,6 @@ try:
 except Exception as e:
     st.error(f"Error loading sessions: {e}"); st.stop()
 
-# Calculate Prev Session
 curr_yr = int(selected_raw_session[:4])
 prev_raw_session = f"{curr_yr - 1:04d}{int(selected_raw_session[4:]) - 1:02d}"
 prev_fmt_session = format_session(prev_raw_session)
@@ -76,8 +91,7 @@ prev_fmt_session = format_session(prev_raw_session)
 # Time Filter Options
 filter_type = st.sidebar.radio("Time Filter Type", ["Quarterly", "6 Months", "Full Year", "Last 3 Months", "Last 6 Months", "Custom Months"])
 
-# Filter Logic Builder
-query_filters_curr = [] # List of tuples: (session, month_list)
+query_filters_curr = []
 query_filters_prev = []
 display_period_text = ""
 
@@ -97,44 +111,37 @@ if filter_type in ["Quarterly", "6 Months", "Full Year", "Custom Months"]:
     query_filters_prev = [(prev_raw_session, selected_months)]
     display_period_text = f"Months: {', '.join(selected_months)}"
 
-else: # Rolling Filters (Last 3 or Last 6 Months across sessions if needed)
-    end_m = st.sidebar.selectbox("Current/Ending Month", MONTH_ORDER, index=3) # Default Jul
+else: # Rolling Filters
+    end_m = st.sidebar.selectbox("Current/Ending Month", MONTH_ORDER, index=3)
     n_months = 3 if filter_type == "Last 3 Months" else 6
     end_idx = MONTH_ORDER.index(end_m)
     
     if end_idx >= n_months - 1:
-        # Fits inside same session
         curr_m_list = MONTH_ORDER[end_idx - n_months + 1 : end_idx + 1]
         query_filters_curr = [(selected_raw_session, curr_m_list)]
         query_filters_prev = [(prev_raw_session, curr_m_list)]
     else:
-        # Crosses financial year (e.g., Feb, Mar of prev session + Apr, May, Jun, Jul of current)
         overlap_prev_count = n_months - (end_idx + 1)
         prev_m_list = MONTH_ORDER[-overlap_prev_count:]
         curr_m_list = MONTH_ORDER[:end_idx + 1]
         
         query_filters_curr = [(prev_raw_session, prev_m_list), (selected_raw_session, curr_m_list)]
-        
-        # Corresponding prev period calculation
         prev_prev_raw_session = f"{curr_yr - 2:04d}{int(selected_raw_session[4:]) - 2:02d}"
         query_filters_prev = [(prev_prev_raw_session, prev_m_list), (prev_raw_session, curr_m_list)]
 
     display_period_text = f"{filter_type} (Ending {end_m})"
 
-# Total Days Calculation
-total_days = 0
-for sess, m_list in query_filters_curr:
-    total_days += sum([MONTH_DAYS.get(m, 30) for m in m_list])
+total_days = sum([sum([MONTH_DAYS.get(m, 30) for m in m_list]) for _, m_list in query_filters_curr])
 
-# ----------------- FETCHING DATA -----------------
-def fetch_total_earning(table_name, filters_list, earning_col='EARNING'):
+# ----------------- DATA FETCHING FUNCTIONS -----------------
+def fetch_total(table_name, filters_list, col_name):
     total = 0.0
     with engine.connect() as conn:
         for sess, m_list in filters_list:
             if not m_list: continue
             m_str = "','".join(m_list)
             q = f'''
-                SELECT SUM("{earning_col}") as val FROM {table_name}
+                SELECT SUM("{col_name}") as val FROM {table_name}
                 WHERE "STATION_CODE" = '{selected_station}' 
                   AND CAST("SESSION" AS TEXT) LIKE '{sess}%' 
                   AND "MONTH" IN ('{m_str}')
@@ -145,37 +152,61 @@ def fetch_total_earning(table_name, filters_list, earning_col='EARNING'):
             except Exception: pass
     return total
 
-# Earnings
-b_curr = fetch_total_earning('booking', query_filters_curr, 'EARNING')
-p_curr = fetch_total_earning('reservation_org', query_filters_curr, 'EARNINGS')
-g_curr = fetch_total_earning('goods', query_filters_curr, 'OW_FRIEGHT')
-pr_curr = fetch_total_earning('parcel', query_filters_curr, 'OW_FRIEGHT')
+# Fetch Earnings & Passengers
+b_ear_curr = fetch_total('booking', query_filters_curr, 'EARNING')
+b_ear_prev = fetch_total('booking', query_filters_prev, 'EARNING')
+b_pass_curr = fetch_total('booking', query_filters_curr, 'PASSENGERS')
 
-b_prev = fetch_total_earning('booking', query_filters_prev, 'EARNING')
-p_prev = fetch_total_earning('reservation_org', query_filters_prev, 'EARNINGS')
-g_prev = fetch_total_earning('goods', query_filters_prev, 'OW_FRIEGHT')
-pr_prev = fetch_total_earning('parcel', query_filters_prev, 'OW_FRIEGHT')
+p_ear_curr = fetch_total('reservation_org', query_filters_curr, 'EARNINGS')
+p_ear_prev = fetch_total('reservation_org', query_filters_prev, 'EARNINGS')
+p_pass_curr = fetch_total('reservation_org', query_filters_curr, 'PASSENGERS')
 
-# ----------------- DISPLAY -----------------
+g_ear_curr = fetch_total('goods', query_filters_curr, 'OW_FRIEGHT')
+g_ear_prev = fetch_total('goods', query_filters_prev, 'OW_FRIEGHT')
+
+pr_ear_curr = fetch_total('parcel', query_filters_curr, 'OW_FRIEGHT')
+pr_ear_prev = fetch_total('parcel', query_filters_prev, 'OW_FRIEGHT')
+
+# Combined Passenger Calculation
+comb_pass_curr = b_pass_curr + p_pass_curr
+comb_ear_curr = b_ear_curr + p_ear_curr
+comb_ear_prev = b_ear_prev + p_ear_prev
+
+# ----------------- DISPLAY METRICS -----------------
 st.markdown(f"### 📍 Station: **{selected_station}** | Period: **{display_period_text}**")
-st.caption(f"🗓️ Comparing Current Period vs Previous Year Period ({total_days} Days Selected)")
+st.caption(f"🗓️ Current Period vs Previous Year Period ({total_days} Days Selected)")
 
-col1, col2, col3, col4 = st.columns(4)
+# Metric Columns
+c1, c2, c3, c4, c5 = st.columns([1.2, 1, 1, 1, 1])
+
+with c1:
+    comb_growth = ((comb_ear_curr - comb_ear_prev) / comb_ear_prev * 100) if comb_ear_prev > 0 else 0
+    pass_per_day = comb_pass_curr / total_days if total_days > 0 else 0
+    ear_per_day = comb_ear_curr / total_days if total_days > 0 else 0
+    
+    st.markdown(f"""
+        <div class="combined-card">
+            <div style="font-size: 0.85rem; font-weight: bold; color: #333;">👥 Combined Passenger (PRS+Booking)</div>
+            <div style="font-size: 0.8rem; margin-top:2px;"><b>Pass:</b> {format_inr(comb_pass_curr)} | <b>Earning:</b> ₹ {format_inr(comb_ear_curr)}</div>
+            <div style="font-size: 0.75rem; color: #555; margin-top:2px;"><b>Pass/Day:</b> {format_inr(pass_per_day)} | <b>Ear/Day:</b> ₹ {format_inr(ear_per_day)}</div>
+            <div style="font-size: 0.75rem; color: {'green' if comb_growth>=0 else 'red'}; font-weight:bold;">{comb_growth:+.1f}% vs Prev. Year</div>
+        </div>
+    """, unsafe_allow_html=True)
 
 def metric_box(col, title, curr, prev, days):
     per_day = curr / days if days > 0 else 0
     growth = ((curr - prev) / prev * 100) if prev > 0 else 0
-    col.metric(label=f"{title}", value=f"₹ {curr:,.0f}", delta=f"{growth:+.1f}% vs Last Year")
-    col.caption(f"⏱️ **Per Day:** ₹ {per_day:,.0f}/day")
+    col.metric(label=title, value=f"₹ {format_inr(curr)}", delta=f"{growth:+.1f}% vs Prev. Year")
+    col.caption(f"⏱️ **Ear/Day:** ₹ {format_inr(per_day)}")
 
-metric_box(col1, "Booking (Passenger)", b_curr, b_prev, total_days)
-metric_box(col2, "PRS (Originating)", p_curr, p_prev, total_days)
-metric_box(col3, "Goods Freight (O/W)", g_curr, g_prev, total_days)
-metric_box(col4, "Parcel Freight (O/W)", pr_curr, pr_prev, total_days)
+metric_box(c2, "Booking (Ear)", b_ear_curr, b_ear_prev, total_days)
+metric_box(c3, "PRS_ORG (Ear)", p_ear_curr, p_ear_prev, total_days)
+metric_box(c4, "Goods Freight", g_ear_curr, g_ear_prev, total_days)
+metric_box(c5, "Parcel Freight", pr_ear_curr, pr_ear_prev, total_days)
 
 st.markdown("---")
 
-# ----------------- TABLES SECTION -----------------
+# ----------------- DETAILED TABLES -----------------
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Booking", "PRS Org", "Combined Passenger", "Goods", "Parcel", "Reservation"
 ])
@@ -198,14 +229,12 @@ def fetch_table_filtered(table_name):
                     frames.append(df)
             except Exception: pass
             
-    if not frames:
-        return pd.DataFrame()
+    if not frames: return pd.DataFrame()
         
     full_df = pd.concat(frames, ignore_index=True)
     drop_cols = ['STATION_CODE', 'SESSION', 'station_code', 'session']
     full_df = full_df.drop(columns=[c for c in drop_cols if c in full_df.columns])
     
-    # Sort logically
     if 'MONTH' in full_df.columns:
         full_df['MONTH_CAT'] = pd.Categorical(full_df['MONTH'], categories=MONTH_ORDER, ordered=True)
         full_df = full_df.sort_values(['FMT_SESSION', 'MONTH_CAT']).drop(columns=['MONTH_CAT'])
@@ -217,7 +246,6 @@ def render_table_with_totals(df, title):
         st.info(f"No records for {title} in selected period.")
         return
         
-    # Calculate Numeric Totals
     num_cols = df.select_dtypes(include=['number']).columns
     total_row = {c: df[c].sum() for c in num_cols}
     
@@ -225,6 +253,11 @@ def render_table_with_totals(df, title):
     if 'FMT_SESSION' in df.columns: total_row['FMT_SESSION'] = 'ALL'
     
     df_totals = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
+    
+    # Format all numeric columns to Indian style numbers
+    for c in num_cols:
+        df_totals[c] = df_totals[c].apply(lambda x: format_inr(x) if pd.notnull(x) else x)
+
     st.dataframe(df_totals, use_container_width=True, hide_index=True)
 
 with tab1:
@@ -233,12 +266,11 @@ with tab1:
 with tab2:
     render_table_with_totals(fetch_table_filtered('reservation_org'), "PRS Org")
 
-with tab3: # Combined Passenger Table (Booking + PRS Org)
+with tab3:
     df_b = fetch_table_filtered('booking')
     df_p = fetch_table_filtered('reservation_org')
     
     if not df_b.empty and not df_p.empty:
-        # Merge on Session and Month
         m_df = pd.merge(df_b, df_p, on=['FMT_SESSION', 'MONTH'], suffixes=('_Booking', '_PRS'))
         combined = pd.DataFrame()
         combined['Session'] = m_df['FMT_SESSION']
