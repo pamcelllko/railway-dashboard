@@ -31,29 +31,60 @@ st.title("🚄 Station Earning & Traffic Executive Dashboard")
 # ----------------- SIDEBAR FILTERS -----------------
 st.sidebar.header("🔍 Filter Options")
 
-# Fetch Available Stations
-try:
+# Fetch Available Stations smartly
+@st.cache_data(ttl=600)
+def load_stations():
+    queries = [
+        'SELECT DISTINCT "STATION_COD" FROM station_list',
+        'SELECT DISTINCT "station_cod" FROM station_list',
+        'SELECT DISTINCT "STATION_COD" FROM booking',
+        'SELECT DISTINCT "station_cod" FROM booking',
+        'SELECT DISTINCT "STN_CD" FROM booking',
+        'SELECT DISTINCT "stn_cd" FROM booking'
+    ]
     with engine.connect() as conn:
-        stations_df = pd.read_sql(text('SELECT DISTINCT "STATION_COD" FROM booking'), conn)
-        stations = stations_df['STATION_COD'].dropna().unique().tolist()
-    
-    selected_station = st.sidebar.selectbox("Select Station", sorted(stations))
+        for q in queries:
+            try:
+                df = pd.read_sql(text(q), conn)
+                col = df.columns[0]
+                stations = df[col].dropna().unique().tolist()
+                if len(stations) > 0:
+                    return sorted([str(s).strip() for s in stations])
+            except Exception:
+                continue
+    return []
+
+try:
+    stations = load_stations()
+    if not stations:
+        st.error("No stations found in database tables.")
+        st.stop()
+    selected_station = st.sidebar.selectbox("Select Station", stations)
 except Exception as e:
     st.error(f"Error loading stations: {e}")
     st.stop()
 
-# Fetch Available Sessions
-try:
+# Fetch Available Sessions smartly
+@st.cache_data(ttl=600)
+def load_sessions():
+    queries = [
+        'SELECT DISTINCT "SESSION" FROM booking ORDER BY "SESSION" DESC',
+        'SELECT DISTINCT "session" FROM booking ORDER BY "session" DESC'
+    ]
     with engine.connect() as conn:
-        sessions_df = pd.read_sql(text('SELECT DISTINCT "SESSION" FROM booking ORDER BY "SESSION" DESC'), conn)
-        sessions = sessions_df['SESSION'].dropna().tolist()
-    selected_session = st.sidebar.selectbox("Select Current Session", sessions)
-except Exception:
-    # Fallback if SESSION column is lower or upper
-    with engine.connect() as conn:
-        sessions_df = pd.read_sql(text('SELECT DISTINCT "session" FROM booking ORDER BY "session" DESC'), conn)
-        sessions = sessions_df['session'].dropna().tolist()
-    selected_session = st.sidebar.selectbox("Select Current Session", sessions)
+        for q in queries:
+            try:
+                df = pd.read_sql(text(q), conn)
+                col = df.columns[0]
+                sessions = df[col].dropna().unique().tolist()
+                if len(sessions) > 0:
+                    return [str(s).strip() for s in sessions]
+            except Exception:
+                continue
+    return ["202324"]
+
+sessions = load_sessions()
+selected_session = st.sidebar.selectbox("Select Current Session", sessions)
 
 # Previous Session Logic
 try:
@@ -80,34 +111,47 @@ else:
 total_days = sum([MONTH_DAYS.get(m, 30) for m in selected_months])
 
 # ----------------- DATA FETCHING -----------------
-def fetch_head_earning(table_name, station, session, months, earning_col='EARNING'):
+def fetch_head_earning(table_name, station, session, months):
     months_str = "','".join(months)
-    query = f'''
-        SELECT SUM("{earning_col}") as total_earning 
-        FROM {table_name} 
-        WHERE "STATION_COD" = '{station}' 
-          AND "SESSION" = '{session}' 
-          AND "MONTH" IN ('{months_str}')
-    '''
+    # Flexible column selection
+    query = f"SELECT * FROM {table_name} WHERE 1=1 LIMIT 1"
     try:
         with engine.connect() as conn:
-            df = pd.read_sql(text(query), conn)
+            sample = pd.read_sql(text(query), conn)
+            cols = {c.lower(): c for c in sample.columns}
+            
+            stn_col = cols.get('station_cod') or cols.get('stn_cd') or cols.get('stn')
+            sess_col = cols.get('session')
+            mnth_col = cols.get('month')
+            earn_col = cols.get('earning') or cols.get('earnings') or cols.get('ow_friegh') or cols.get('freight')
+            
+            if not (stn_col and sess_col and mnth_col and earn_col):
+                return 0.0
+            
+            sql = f'''
+                SELECT SUM("{earn_col}") as total_earning 
+                FROM {table_name} 
+                WHERE "{stn_col}" = '{station}' 
+                  AND "{sess_col}" = '{session}' 
+                  AND "{mnth_col}" IN ('{months_str}')
+            '''
+            df = pd.read_sql(text(sql), conn)
             val = df['total_earning'].iloc[0]
             return float(val) if pd.notnull(val) else 0.0
     except Exception:
         return 0.0
 
 # Current Year Earnings
-booking_curr = fetch_head_earning('booking', selected_station, selected_session, selected_months, 'EARNING')
-prs_curr = fetch_head_earning('reservation_org', selected_station, selected_session, selected_months, 'EARNINGS')
-goods_curr = fetch_head_earning('goods', selected_station, selected_session, selected_months, 'OW_FRIEGH')
-parcel_curr = fetch_head_earning('parcel', selected_station, selected_session, selected_months, 'OW_FRIEGH')
+booking_curr = fetch_head_earning('booking', selected_station, selected_session, selected_months)
+prs_curr = fetch_head_earning('reservation_org', selected_station, selected_session, selected_months)
+goods_curr = fetch_head_earning('goods', selected_station, selected_session, selected_months)
+parcel_curr = fetch_head_earning('parcel', selected_station, selected_session, selected_months)
 
 # Last Year Earnings
-booking_prev = fetch_head_earning('booking', selected_station, prev_session, selected_months, 'EARNING')
-prs_prev = fetch_head_earning('reservation_org', selected_station, prev_session, selected_months, 'EARNINGS')
-goods_prev = fetch_head_earning('goods', selected_station, prev_session, selected_months, 'OW_FRIEGH')
-parcel_prev = fetch_head_earning('parcel', selected_station, prev_session, selected_months, 'OW_FRIEGH')
+booking_prev = fetch_head_earning('booking', selected_station, prev_session, selected_months)
+prs_prev = fetch_head_earning('reservation_org', selected_station, prev_session, selected_months)
+goods_prev = fetch_head_earning('goods', selected_station, prev_session, selected_months)
+parcel_prev = fetch_head_earning('parcel', selected_station, prev_session, selected_months)
 
 # ----------------- DASHBOARD DISPLAY -----------------
 st.subheader(f"📍 Station: {selected_station} | Session: {selected_session} vs {prev_session}")
@@ -136,9 +180,18 @@ st.divider()
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["Booking", "PRS Org", "Goods", "Parcel", "Reservation"])
 
 def show_tab_data(table_name):
-    q = f'SELECT * FROM {table_name} WHERE "STATION_COD" = \'{selected_station}\' AND "SESSION" = \'{selected_session}\''
     try:
         with engine.connect() as conn:
+            sample = pd.read_sql(text(f"SELECT * FROM {table_name} LIMIT 1"), conn)
+            cols = {c.lower(): c for c in sample.columns}
+            stn_col = cols.get('station_cod') or cols.get('stn_cd') or cols.get('stn')
+            sess_col = cols.get('session')
+            
+            if stn_col and sess_col:
+                q = f'SELECT * FROM {table_name} WHERE "{stn_col}" = \'{selected_station}\' AND "{sess_col}" = \'{selected_session}\''
+            else:
+                q = f'SELECT * FROM {table_name} LIMIT 100'
+                
             df = pd.read_sql(text(q), conn)
             st.dataframe(df, use_container_width=True)
     except Exception as e:
