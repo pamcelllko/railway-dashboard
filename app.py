@@ -69,13 +69,12 @@ except Exception:
     selected_station = 'SHG'
 
 # Session Mapping
-session_map = {
-    "2026-27": "202627",
-    "2025-26": "202526",
-    "2024-25": "202425"
-}
-selected_fmt_session = st.sidebar.selectbox("Select Session", list(session_map.keys()))
-raw_session_target = session_map[selected_fmt_session]
+session_options = ["2026-27", "2025-26", "2024-25"]
+selected_fmt_session = st.sidebar.selectbox("Select Session", session_options)
+
+curr_yr = int(selected_fmt_session.split('-')[0])
+curr_session_raw = f"{curr_yr}{str(curr_yr+1)[2:]}" # e.g. 202627
+prev_session_raw = f"{curr_yr-1}{str(curr_yr)[2:]}" # e.g. 202526 for Jan-Mar
 
 # Time Filters
 filter_type = st.sidebar.radio("Time Filter Type", ["Quarterly", "6 Months", "Full Year", "Last 3 Months", "Last 6 Months", "Custom Months"])
@@ -96,51 +95,65 @@ elif filter_type == "Last 3 Months":
 elif filter_type == "Last 6 Months":
     end_m = st.sidebar.selectbox("Ending Month", MONTH_ORDER, index=3) # Jul
     idx = MONTH_ORDER.index(end_m)
-    selected_months = MONTH_ORDER[max(0, idx-5):idx+1]
+    if idx >= 5:
+        selected_months = MONTH_ORDER[idx-5:idx+1]
+    else:
+        # Wrap around to previous session months (Jan, Feb, Mar etc.)
+        selected_months = MONTH_ORDER[idx-5:] + MONTH_ORDER[:idx+1]
 else:
     selected_months = st.sidebar.multiselect("Select Months", MONTH_ORDER, default=['Apr', 'May', 'Jun', 'Jul'])
 
 total_days = sum([MONTH_DAYS.get(m, 30) for m in selected_months])
 
-# ----------------- STRICT FILTERING ENGINE -----------------
-def fetch_and_clean_data_strict(table_name, station, target_session, months):
+# ----------------- DATABASE FETCHING WITH STRICT SQL -----------------
+def fetch_exact_data(table_name, station, curr_sess, prev_sess, months):
     if not months: return pd.DataFrame()
+    months_str = "','".join(months)
     
-    # Query Station First
-    q = f'SELECT * FROM {table_name} WHERE "STATION_CODE" = \'{station}\''
+    # Check if session needs split (e.g. Feb, Mar from prev_sess, Apr-Jul from curr_sess)
+    jan_mar_months = [m for m in months if m in ['Jan', 'Feb', 'Mar']]
+    apr_dec_months = [m for m in months if m not in ['Jan', 'Feb', 'Mar']]
+    
+    where_clauses = []
+    if apr_dec_months:
+        apr_str = "','".join(apr_dec_months)
+        where_clauses.append(f"(CAST(\"SESSION\" AS TEXT) LIKE '{curr_sess}%' AND \"MONTH\" IN ('{apr_str}'))")
+    if jan_mar_months:
+        jan_str = "','".join(jan_mar_months)
+        # If user chooses Jan-Mar within same session or previous cross-session
+        where_clauses.append(f"(CAST(\"SESSION\" AS TEXT) LIKE '{curr_sess}%' AND \"MONTH\" IN ('{jan_str}'))")
+    
+    where_sql = " OR ".join(where_clauses) if where_clauses else f"CAST(\"SESSION\" AS TEXT) LIKE '{curr_sess}%'"
+    
+    q = f'''
+        SELECT * FROM {table_name} 
+        WHERE "STATION_CODE" = '{station}' 
+          AND ({where_sql})
+    '''
     try:
         with engine.connect() as conn:
             df = pd.read_sql(text(q), conn)
             if df.empty: return pd.DataFrame()
             
-            # Standardize Column Names
             df.columns = [c.upper().strip() for c in df.columns]
             
-            # 1. STRICT SESSION FILTER (Convert float/int/str to exact clean integer string)
-            if 'SESSION' in df.columns:
-                df['SESSION_CLEAN'] = df['SESSION'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-                df = df[df['SESSION_CLEAN'] == str(target_session)]
-                
-            # 2. STRICT MONTH FILTER
-            if 'MONTH' in df.columns:
-                df['MONTH'] = df['MONTH'].astype(str).str.strip().str.title()
-                df = df[df['MONTH'].isin(months)]
-                
-            # 3. CONVERT NUMERIC FIELDS
+            # Numeric conversion
             num_cols = ['PASSENGER', 'PASSENGERS', 'EARNING', 'EARNINGS', 'OW_FRIEGHT', 'NET_CASH']
             for col in num_cols:
                 if col in df.columns:
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-                    
+            
+            # Remove exact duplicated rows
+            df = df.drop_duplicates()
             return df
-    except Exception as e:
+    except Exception:
         return pd.DataFrame()
 
 # Fetch Cleaned Data
-df_booking = fetch_and_clean_data_strict('booking', selected_station, raw_session_target, selected_months)
-df_prs_org = fetch_and_clean_data_strict('reservation_org', selected_station, raw_session_target, selected_months)
-df_goods = fetch_and_clean_data_strict('goods', selected_station, raw_session_target, selected_months)
-df_parcel = fetch_and_clean_data_strict('parcel', selected_station, raw_session_target, selected_months)
+df_booking = fetch_exact_data('booking', selected_station, curr_session_raw, prev_session_raw, selected_months)
+df_prs_org = fetch_exact_data('reservation_org', selected_station, curr_session_raw, prev_session_raw, selected_months)
+df_goods = fetch_exact_data('goods', selected_station, curr_session_raw, prev_session_raw, selected_months)
+df_parcel = fetch_exact_data('parcel', selected_station, curr_session_raw, prev_session_raw, selected_months)
 
 # Determine Passenger Column Name
 pass_col_b = 'PASSENGER' if 'PASSENGER' in df_booking.columns else ('PASSENGERS' if 'PASSENGERS' in df_booking.columns else None)
@@ -199,7 +212,7 @@ def render_table_clean(df, title):
         st.info(f"No records found for {title} in Session {selected_fmt_session}.")
         return
         
-    drop_cols = ['STATION_CODE', 'SESSION', 'SESSION_CLEAN']
+    drop_cols = ['STATION_CODE', 'SESSION']
     clean_df = df.drop(columns=[c for c in drop_cols if c in df.columns], errors='ignore')
     
     if 'MONTH' in clean_df.columns:
@@ -243,7 +256,7 @@ with tab3:
 with tab4: render_table_clean(df_goods, "Goods")
 with tab5: render_table_clean(df_parcel, "Parcel")
 with tab6:
-    df_res = fetch_and_clean_data_strict('reservation', selected_station, raw_session_target, selected_months)
+    df_res = fetch_exact_data('reservation', selected_station, curr_session_raw, prev_session_raw, selected_months)
     if 'NET_CASH' in df_res.columns:
         df_res = df_res.rename(columns={'NET_CASH': 'EARNING (NET_CASH)'})
     render_table_clean(df_res, "Reservation")
