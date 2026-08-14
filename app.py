@@ -25,7 +25,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Helper function for Indian Currency Format
+# Helper function for Indian Currency/Number Format
 def format_inr(number):
     try:
         if pd.isna(number) or number is None: return "0"
@@ -68,14 +68,14 @@ try:
 except Exception:
     selected_station = 'SHG'
 
-# Session Mapping (Standard format vs Database Format)
+# Session Mapping
 session_map = {
     "2026-27": "202627",
     "2025-26": "202526",
     "2024-25": "202425"
 }
 selected_fmt_session = st.sidebar.selectbox("Select Session", list(session_map.keys()))
-raw_session = session_map[selected_fmt_session]
+raw_session_target = session_map[selected_fmt_session]
 
 # Time Filters
 filter_type = st.sidebar.radio("Time Filter Type", ["Quarterly", "6 Months", "Full Year", "Last 3 Months", "Last 6 Months", "Custom Months"])
@@ -102,52 +102,51 @@ else:
 
 total_days = sum([MONTH_DAYS.get(m, 30) for m in selected_months])
 
-# ----------------- DATA CLEANING & FETCHING ENGINE -----------------
-def fetch_and_clean_data(table_name, station, session_code, months):
+# ----------------- STRICT FILTERING ENGINE -----------------
+def fetch_and_clean_data_strict(table_name, station, target_session, months):
     if not months: return pd.DataFrame()
     
+    # Query Station First
     q = f'SELECT * FROM {table_name} WHERE "STATION_CODE" = \'{station}\''
     try:
         with engine.connect() as conn:
             df = pd.read_sql(text(q), conn)
             if df.empty: return pd.DataFrame()
             
-            # 1. Clean Column Names
+            # Standardize Column Names
             df.columns = [c.upper().strip() for c in df.columns]
             
-            # 2. Format & Clean Session Column
+            # 1. STRICT SESSION FILTER (Convert float/int/str to exact clean integer string)
             if 'SESSION' in df.columns:
-                df['SESSION'] = df['SESSION'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-                df = df[df['SESSION'] == str(session_code)]
+                df['SESSION_CLEAN'] = df['SESSION'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+                df = df[df['SESSION_CLEAN'] == str(target_session)]
                 
-            # 3. Clean Month Column
+            # 2. STRICT MONTH FILTER
             if 'MONTH' in df.columns:
                 df['MONTH'] = df['MONTH'].astype(str).str.strip().str.title()
                 df = df[df['MONTH'].isin(months)]
                 
-            # 4. Typecast Numeric Columns (Earning, Passengers, Freight)
+            # 3. CONVERT NUMERIC FIELDS
             num_cols = ['PASSENGER', 'PASSENGERS', 'EARNING', 'EARNINGS', 'OW_FRIEGHT', 'NET_CASH']
             for col in num_cols:
                 if col in df.columns:
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
                     
-            # 5. Remove exact duplicates
-            df = df.drop_duplicates()
             return df
     except Exception as e:
         return pd.DataFrame()
 
-# Fetch Clean Data
-df_booking = fetch_and_clean_data('booking', selected_station, raw_session, selected_months)
-df_prs_org = fetch_and_clean_data('reservation_org', selected_station, raw_session, selected_months)
-df_goods = fetch_and_clean_data('goods', selected_station, raw_session, selected_months)
-df_parcel = fetch_and_clean_data('parcel', selected_station, raw_session, selected_months)
+# Fetch Cleaned Data
+df_booking = fetch_and_clean_data_strict('booking', selected_station, raw_session_target, selected_months)
+df_prs_org = fetch_and_clean_data_strict('reservation_org', selected_station, raw_session_target, selected_months)
+df_goods = fetch_and_clean_data_strict('goods', selected_station, raw_session_target, selected_months)
+df_parcel = fetch_and_clean_data_strict('parcel', selected_station, raw_session_target, selected_months)
 
-# Identify Passenger Columns
+# Determine Passenger Column Name
 pass_col_b = 'PASSENGER' if 'PASSENGER' in df_booking.columns else ('PASSENGERS' if 'PASSENGERS' in df_booking.columns else None)
 pass_col_p = 'PASSENGER' if 'PASSENGER' in df_prs_org.columns else ('PASSENGERS' if 'PASSENGERS' in df_prs_org.columns else None)
 
-# Calculating Exact Sums
+# Calculate Exact Totals
 b_ear_curr = df_booking['EARNING'].sum() if 'EARNING' in df_booking.columns and not df_booking.empty else 0.0
 b_pass_curr = df_booking[pass_col_b].sum() if pass_col_b and not df_booking.empty else 0.0
 
@@ -157,7 +156,7 @@ p_pass_curr = df_prs_org[pass_col_p].sum() if pass_col_p and not df_prs_org.empt
 g_ear_curr = df_goods['OW_FRIEGHT'].sum() if 'OW_FRIEGHT' in df_goods.columns and not df_goods.empty else 0.0
 pr_ear_curr = df_parcel['OW_FRIEGHT'].sum() if 'OW_FRIEGHT' in df_parcel.columns and not df_parcel.empty else 0.0
 
-# Combined
+# Combined Passenger
 comb_pass_curr = b_pass_curr + p_pass_curr
 comb_ear_curr = b_ear_curr + p_ear_curr
 
@@ -200,8 +199,8 @@ def render_table_clean(df, title):
         st.info(f"No records found for {title} in Session {selected_fmt_session}.")
         return
         
-    drop_cols = ['STATION_CODE', 'SESSION']
-    clean_df = df.drop(columns=[c for c in drop_cols if c in clean_df.columns], errors='ignore') if 'clean_df' in locals() else df.drop(columns=[c for c in drop_cols if c in df.columns], errors='ignore')
+    drop_cols = ['STATION_CODE', 'SESSION', 'SESSION_CLEAN']
+    clean_df = df.drop(columns=[c for c in drop_cols if c in df.columns], errors='ignore')
     
     if 'MONTH' in clean_df.columns:
         clean_df['MONTH_CAT'] = pd.Categorical(clean_df['MONTH'], categories=MONTH_ORDER, ordered=True)
@@ -244,7 +243,7 @@ with tab3:
 with tab4: render_table_clean(df_goods, "Goods")
 with tab5: render_table_clean(df_parcel, "Parcel")
 with tab6:
-    df_res = fetch_and_clean_data('reservation', selected_station, raw_session, selected_months)
+    df_res = fetch_and_clean_data_strict('reservation', selected_station, raw_session_target, selected_months)
     if 'NET_CASH' in df_res.columns:
         df_res = df_res.rename(columns={'NET_CASH': 'EARNING (NET_CASH)'})
     render_table_clean(df_res, "Reservation")
