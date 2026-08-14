@@ -9,7 +9,39 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom Styling
+# ----------------- SECURE LOGIN SYSTEM -----------------
+def check_authentication():
+    if "authenticated" not in st.session_state:
+        st.session_state["authenticated"] = False
+
+    if not st.session_state["authenticated"]:
+        st.markdown("## 🔒 Railway Dashboard Login")
+        st.info("Direct access is restricted. Please enter your credentials below.")
+        
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
+            login_btn = st.button("Login")
+
+            if login_btn:
+                # Streamlit Secrets se credentials verify honge
+                valid_user = st.secrets.get("APP_USER", "StationEarning")
+                valid_pass = st.secrets.get("APP_PASSWORD", "pamcell2234723")
+                
+                if username == valid_user and password == valid_pass:
+                    st.session_state["authenticated"] = True
+                    st.success("Login Successful!")
+                    st.rerun()
+                else:
+                    st.error("Invalid Username or Password!")
+        return False
+    return True
+
+if not check_authentication():
+    st.stop()  # Login hone tak aage ka dashboard load nahi hoga
+
+# ----------------- STYLING & UTILS -----------------
 st.markdown("""
     <style>
         .block-container { padding-top: 1rem !important; padding-bottom: 0rem !important; }
@@ -36,12 +68,11 @@ def format_inr(number):
     except Exception:
         return f"{number}"
 
-# Supabase Connection
-SUPABASE_URL = "postgresql://postgres.ggrpypensvabbvpyzqbx:pamcelllko2234723@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
-
+# SECURE SUPABASE CONNECTION (Fetch from Secrets)
 @st.cache_resource
 def get_database_connection():
-    return create_engine(SUPABASE_URL, pool_pre_ping=True)
+    db_url = st.secrets["SUPABASE_URL"]
+    return create_engine(db_url, pool_pre_ping=True)
 
 engine = get_database_connection()
 
@@ -54,6 +85,12 @@ QUARTERS = {
     'Q3 (Oct-Dec)': ['Oct', 'Nov', 'Dec'],
     'Q4 (Jan-Mar)': ['Jan', 'Feb', 'Mar']
 }
+
+# Logout Button in Sidebar Header
+st.sidebar.markdown("### 👤 Logged in as: **StationEarning**")
+if st.sidebar.button("Logout"):
+    st.session_state["authenticated"] = False
+    st.rerun()
 
 st.title("🚄 Station Earning & Traffic Executive Dashboard")
 
@@ -98,7 +135,6 @@ elif filter_type == "Last 6 Months":
     if idx >= 5:
         selected_months = MONTH_ORDER[idx-5:idx+1]
     else:
-        # Wrap around to previous session months (Jan, Feb, Mar etc.)
         selected_months = MONTH_ORDER[idx-5:] + MONTH_ORDER[:idx+1]
 else:
     selected_months = st.sidebar.multiselect("Select Months", MONTH_ORDER, default=['Apr', 'May', 'Jun', 'Jul'])
@@ -108,9 +144,7 @@ total_days = sum([MONTH_DAYS.get(m, 30) for m in selected_months])
 # ----------------- DATABASE FETCHING WITH STRICT SQL -----------------
 def fetch_exact_data(table_name, station, curr_sess, prev_sess, months):
     if not months: return pd.DataFrame()
-    months_str = "','".join(months)
     
-    # Check if session needs split (e.g. Feb, Mar from prev_sess, Apr-Jul from curr_sess)
     jan_mar_months = [m for m in months if m in ['Jan', 'Feb', 'Mar']]
     apr_dec_months = [m for m in months if m not in ['Jan', 'Feb', 'Mar']]
     
@@ -120,7 +154,6 @@ def fetch_exact_data(table_name, station, curr_sess, prev_sess, months):
         where_clauses.append(f"(CAST(\"SESSION\" AS TEXT) LIKE '{curr_sess}%' AND \"MONTH\" IN ('{apr_str}'))")
     if jan_mar_months:
         jan_str = "','".join(jan_mar_months)
-        # If user chooses Jan-Mar within same session or previous cross-session
         where_clauses.append(f"(CAST(\"SESSION\" AS TEXT) LIKE '{curr_sess}%' AND \"MONTH\" IN ('{jan_str}'))")
     
     where_sql = " OR ".join(where_clauses) if where_clauses else f"CAST(\"SESSION\" AS TEXT) LIKE '{curr_sess}%'"
@@ -137,15 +170,12 @@ def fetch_exact_data(table_name, station, curr_sess, prev_sess, months):
             
             df.columns = [c.upper().strip() for c in df.columns]
             
-            # Numeric conversion
             num_cols = ['PASSENGER', 'PASSENGERS', 'EARNING', 'EARNINGS', 'OW_FRIEGHT', 'NET_CASH']
             for col in num_cols:
                 if col in df.columns:
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
             
-            # Remove exact duplicated rows
-            df = df.drop_duplicates()
-            return df
+            return df.drop_duplicates()
     except Exception:
         return pd.DataFrame()
 
@@ -155,11 +185,9 @@ df_prs_org = fetch_exact_data('reservation_org', selected_station, curr_session_
 df_goods = fetch_exact_data('goods', selected_station, curr_session_raw, prev_session_raw, selected_months)
 df_parcel = fetch_exact_data('parcel', selected_station, curr_session_raw, prev_session_raw, selected_months)
 
-# Determine Passenger Column Name
 pass_col_b = 'PASSENGER' if 'PASSENGER' in df_booking.columns else ('PASSENGERS' if 'PASSENGERS' in df_booking.columns else None)
 pass_col_p = 'PASSENGER' if 'PASSENGER' in df_prs_org.columns else ('PASSENGERS' if 'PASSENGERS' in df_prs_org.columns else None)
 
-# Calculate Exact Totals
 b_ear_curr = df_booking['EARNING'].sum() if 'EARNING' in df_booking.columns and not df_booking.empty else 0.0
 b_pass_curr = df_booking[pass_col_b].sum() if pass_col_b and not df_booking.empty else 0.0
 
@@ -169,7 +197,6 @@ p_pass_curr = df_prs_org[pass_col_p].sum() if pass_col_p and not df_prs_org.empt
 g_ear_curr = df_goods['OW_FRIEGHT'].sum() if 'OW_FRIEGHT' in df_goods.columns and not df_goods.empty else 0.0
 pr_ear_curr = df_parcel['OW_FRIEGHT'].sum() if 'OW_FRIEGHT' in df_parcel.columns and not df_parcel.empty else 0.0
 
-# Combined Passenger
 comb_pass_curr = b_pass_curr + p_pass_curr
 comb_ear_curr = b_ear_curr + p_ear_curr
 
