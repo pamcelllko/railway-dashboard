@@ -31,11 +31,11 @@ st.title("🚄 Station Earning & Traffic Executive Dashboard")
 # ----------------- SIDEBAR FILTERS -----------------
 st.sidebar.header("🔍 Filter Options")
 
-# Fetch Available Stations (Lower case query for Postgres safety)
+# Fetch Available Stations
 try:
     with engine.connect() as conn:
-        stations_df = pd.read_sql(text('SELECT DISTINCT "station_cod" FROM booking'), conn)
-        stations = stations_df['station_cod'].dropna().unique().tolist()
+        stations_df = pd.read_sql(text('SELECT DISTINCT "STATION_COD" FROM booking'), conn)
+        stations = stations_df['STATION_COD'].dropna().unique().tolist()
     
     selected_station = st.sidebar.selectbox("Select Station", sorted(stations))
 except Exception as e:
@@ -43,15 +43,24 @@ except Exception as e:
     st.stop()
 
 # Fetch Available Sessions
-with engine.connect() as conn:
-    sessions_df = pd.read_sql(text('SELECT DISTINCT "session" FROM booking ORDER BY "session" DESC'), conn)
-    sessions = sessions_df['session'].dropna().tolist()
-
-selected_session = st.sidebar.selectbox("Select Current Session", sessions)
+try:
+    with engine.connect() as conn:
+        sessions_df = pd.read_sql(text('SELECT DISTINCT "SESSION" FROM booking ORDER BY "SESSION" DESC'), conn)
+        sessions = sessions_df['SESSION'].dropna().tolist()
+    selected_session = st.sidebar.selectbox("Select Current Session", sessions)
+except Exception:
+    # Fallback if SESSION column is lower or upper
+    with engine.connect() as conn:
+        sessions_df = pd.read_sql(text('SELECT DISTINCT "session" FROM booking ORDER BY "session" DESC'), conn)
+        sessions = sessions_df['session'].dropna().tolist()
+    selected_session = st.sidebar.selectbox("Select Current Session", sessions)
 
 # Previous Session Logic
-curr_yr = int(selected_session[:4])
-prev_session = f"{curr_yr - 1:04d}{int(selected_session[4:]) - 1:02d}"
+try:
+    curr_yr = int(str(selected_session)[:4])
+    prev_session = f"{curr_yr - 1:04d}{int(str(selected_session)[4:]) - 1:02d}"
+except Exception:
+    prev_session = selected_session
 
 # Filter Type
 filter_type = st.sidebar.radio("Time Filter Type", ["Quarterly", "6 Months", "Full Year", "Custom Months"])
@@ -71,14 +80,14 @@ else:
 total_days = sum([MONTH_DAYS.get(m, 30) for m in selected_months])
 
 # ----------------- DATA FETCHING -----------------
-def fetch_head_earning(table_name, station, session, months, earning_col='earning'):
+def fetch_head_earning(table_name, station, session, months, earning_col='EARNING'):
     months_str = "','".join(months)
     query = f'''
         SELECT SUM("{earning_col}") as total_earning 
         FROM {table_name} 
-        WHERE "station_cod" = '{station}' 
-          AND "session" = '{session}' 
-          AND "month" IN ('{months_str}')
+        WHERE "STATION_COD" = '{station}' 
+          AND "SESSION" = '{session}' 
+          AND "MONTH" IN ('{months_str}')
     '''
     try:
         with engine.connect() as conn:
@@ -89,16 +98,16 @@ def fetch_head_earning(table_name, station, session, months, earning_col='earnin
         return 0.0
 
 # Current Year Earnings
-booking_curr = fetch_head_earning('booking', selected_station, selected_session, selected_months, 'earning')
-prs_curr = fetch_head_earning('reservation_org', selected_station, selected_session, selected_months, 'earnings')
-goods_curr = fetch_head_earning('goods', selected_station, selected_session, selected_months, 'ow_friegh')
-parcel_curr = fetch_head_earning('parcel', selected_station, selected_session, selected_months, 'ow_friegh')
+booking_curr = fetch_head_earning('booking', selected_station, selected_session, selected_months, 'EARNING')
+prs_curr = fetch_head_earning('reservation_org', selected_station, selected_session, selected_months, 'EARNINGS')
+goods_curr = fetch_head_earning('goods', selected_station, selected_session, selected_months, 'OW_FRIEGH')
+parcel_curr = fetch_head_earning('parcel', selected_station, selected_session, selected_months, 'OW_FRIEGH')
 
 # Last Year Earnings
-booking_prev = fetch_head_earning('booking', selected_station, prev_session, selected_months, 'earning')
-prs_prev = fetch_head_earning('reservation_org', selected_station, prev_session, selected_months, 'earnings')
-goods_prev = fetch_head_earning('goods', selected_station, prev_session, selected_months, 'ow_friegh')
-parcel_prev = fetch_head_earning('parcel', selected_station, prev_session, selected_months, 'ow_friegh')
+booking_prev = fetch_head_earning('booking', selected_station, prev_session, selected_months, 'EARNING')
+prs_prev = fetch_head_earning('reservation_org', selected_station, prev_session, selected_months, 'EARNINGS')
+goods_prev = fetch_head_earning('goods', selected_station, prev_session, selected_months, 'OW_FRIEGH')
+parcel_prev = fetch_head_earning('parcel', selected_station, prev_session, selected_months, 'OW_FRIEGH')
 
 # ----------------- DASHBOARD DISPLAY -----------------
 st.subheader(f"📍 Station: {selected_station} | Session: {selected_session} vs {prev_session}")
@@ -127,7 +136,7 @@ st.divider()
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["Booking", "PRS Org", "Goods", "Parcel", "Reservation"])
 
 def show_tab_data(table_name):
-    q = f'SELECT * FROM {table_name} WHERE "station_cod" = \'{selected_station}\' AND "session" = \'{selected_session}\''
+    q = f'SELECT * FROM {table_name} WHERE "STATION_COD" = \'{selected_station}\' AND "SESSION" = \'{selected_session}\''
     try:
         with engine.connect() as conn:
             df = pd.read_sql(text(q), conn)
