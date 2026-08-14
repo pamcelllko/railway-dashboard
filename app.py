@@ -25,7 +25,6 @@ def check_authentication():
             login_btn = st.button("Login")
 
             if login_btn:
-                # Streamlit Secrets se credentials verify honge
                 valid_user = st.secrets.get("APP_USER", "StationEarning")
                 valid_pass = st.secrets.get("APP_PASSWORD", "pamcell2234723")
                 
@@ -39,7 +38,7 @@ def check_authentication():
     return True
 
 if not check_authentication():
-    st.stop()  # Login hone tak aage ka dashboard load nahi hoga
+    st.stop()
 
 # ----------------- STYLING & UTILS -----------------
 st.markdown("""
@@ -68,7 +67,7 @@ def format_inr(number):
     except Exception:
         return f"{number}"
 
-# SECURE SUPABASE CONNECTION (Fetch from Secrets)
+# SECURE SUPABASE CONNECTION
 @st.cache_resource
 def get_database_connection():
     db_url = st.secrets["SUPABASE_URL"]
@@ -86,8 +85,8 @@ QUARTERS = {
     'Q4 (Jan-Mar)': ['Jan', 'Feb', 'Mar']
 }
 
-# Logout Button in Sidebar Header
-st.sidebar.markdown("### 👤 Logged in as: **StationEarning**")
+# Sidebar Header
+st.sidebar.markdown("### 👤 Logged in: **StationEarning**")
 if st.sidebar.button("Logout"):
     st.session_state["authenticated"] = False
     st.rerun()
@@ -97,13 +96,17 @@ st.title("🚄 Station Earning & Traffic Executive Dashboard")
 # ----------------- SIDEBAR FILTERS -----------------
 st.sidebar.header("🔍 Filter Options")
 
-# Station Selection
+# Station Selection with Reliable Fallback List
+stns = ['SHG', 'LKO', 'BBK', 'FD', 'AMH', 'AY', 'JNU', 'SLN']
 try:
     with engine.connect() as conn:
-        stns = sorted(pd.read_sql(text('SELECT DISTINCT "STATION_CODE" FROM booking'), conn)['STATION_CODE'].dropna().unique().tolist())
-    selected_station = st.sidebar.selectbox("Select Station", stns if stns else ['SHG'])
+        db_stns = pd.read_sql(text('SELECT DISTINCT "STATION_CODE" FROM booking'), conn)['STATION_CODE'].dropna().unique().tolist()
+        if db_stns:
+            stns = sorted(list(set(stns + db_stns)))
 except Exception:
-    selected_station = 'SHG'
+    pass
+
+selected_station = st.sidebar.selectbox("Select Station", stns)
 
 # Session Mapping
 session_options = ["2026-27", "2025-26", "2024-25"]
@@ -141,35 +144,48 @@ else:
 
 total_days = sum([MONTH_DAYS.get(m, 30) for m in selected_months])
 
-# ----------------- DATABASE FETCHING WITH STRICT SQL -----------------
-def fetch_exact_data(table_name, station, curr_sess, prev_sess, months):
+# ----------------- FAIL-SAFE DATA FETCHING -----------------
+def fetch_exact_data(table_name, station, target_sess, prev_sess, months):
     if not months: return pd.DataFrame()
     
-    jan_mar_months = [m for m in months if m in ['Jan', 'Feb', 'Mar']]
-    apr_dec_months = [m for m in months if m not in ['Jan', 'Feb', 'Mar']]
-    
-    where_clauses = []
-    if apr_dec_months:
-        apr_str = "','".join(apr_dec_months)
-        where_clauses.append(f"(CAST(\"SESSION\" AS TEXT) LIKE '{curr_sess}%' AND \"MONTH\" IN ('{apr_str}'))")
-    if jan_mar_months:
-        jan_str = "','".join(jan_mar_months)
-        where_clauses.append(f"(CAST(\"SESSION\" AS TEXT) LIKE '{curr_sess}%' AND \"MONTH\" IN ('{jan_str}'))")
-    
-    where_sql = " OR ".join(where_clauses) if where_clauses else f"CAST(\"SESSION\" AS TEXT) LIKE '{curr_sess}%'"
-    
-    q = f'''
-        SELECT * FROM {table_name} 
-        WHERE "STATION_CODE" = '{station}' 
-          AND ({where_sql})
-    '''
+    # Simple & Fast Base Query
+    q = f'SELECT * FROM {table_name} WHERE "STATION_CODE" = \'{station}\''
     try:
         with engine.connect() as conn:
             df = pd.read_sql(text(q), conn)
             if df.empty: return pd.DataFrame()
             
+            # 1. Column Uniformity
             df.columns = [c.upper().strip() for c in df.columns]
             
+            # 2. Robust Session Filtering
+            if 'SESSION' in df.columns:
+                df['SESS_STR'] = df['SESSION'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+                
+                # Check for Jan-Mar cross session filter
+                jan_mar = [m for m in months if m in ['Jan', 'Feb', 'Mar']]
+                apr_dec = [m for m in months if m not in ['Jan', 'Feb', 'Mar']]
+                
+                conds = []
+                if apr_dec:
+                    conds.append((df['SESS_STR'] == str(target_sess)) & (df['MONTH'].str.strip().str.title().isin(apr_dec)))
+                if jan_mar:
+                    conds.append((df['SESS_STR'] == str(target_sess)) & (df['MONTH'].str.strip().str.title().isin(jan_mar)))
+                
+                if conds:
+                    final_cond = conds[0]
+                    for c in conds[1:]:
+                        final_cond = final_cond | c
+                    df = df[final_cond]
+                else:
+                    df = df[df['SESS_STR'] == str(target_sess)]
+            
+            # 3. Month Clean Up
+            if 'MONTH' in df.columns and not df.empty:
+                df['MONTH'] = df['MONTH'].astype(str).str.strip().str.title()
+                df = df[df['MONTH'].isin(months)]
+                
+            # 4. Numeric Formatting
             num_cols = ['PASSENGER', 'PASSENGERS', 'EARNING', 'EARNINGS', 'OW_FRIEGHT', 'NET_CASH']
             for col in num_cols:
                 if col in df.columns:
@@ -239,7 +255,7 @@ def render_table_clean(df, title):
         st.info(f"No records found for {title} in Session {selected_fmt_session}.")
         return
         
-    drop_cols = ['STATION_CODE', 'SESSION']
+    drop_cols = ['STATION_CODE', 'SESSION', 'SESS_STR']
     clean_df = df.drop(columns=[c for c in drop_cols if c in df.columns], errors='ignore')
     
     if 'MONTH' in clean_df.columns:
