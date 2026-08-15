@@ -44,12 +44,30 @@ def parse_session(fmt_s):
     return fmt_s.replace('-', '')
 
 # ----------------- SECURE CREDENTIALS FROM SECRETS -----------------
-try:
-    SUPABASE_URL = st.secrets["SUPABASE_URL"]
-    APP_USER = st.secrets["APP_USER"]
-    APP_PASSWORD = st.secrets["APP_PASSWORD"]
-except Exception as e:
-    st.error("Secrets not properly configured in Streamlit Cloud Dashboard settings.")
+# Fallback Credentials (अगर Secrets लोड न हों तो ये काम करेंगे)
+APP_USER = st.secrets.get("APP_USER", "StationEarning").strip()
+APP_PASSWORD = st.secrets.get("APP_PASSWORD", "pamcell2234723").strip()
+SUPABASE_URL = st.secrets.get("SUPABASE_URL", "postgresql://postgres.ggrpypensvabbvpyzqbx:2234723pamcell@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres").strip()
+
+# ----------------- SIMPLE LOGIN AUTHENTICATION -----------------
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.title("🔒 Station Earning Dashboard Login")
+    
+    with st.form("login_form"):
+        user_input = st.text_input("Username").strip()
+        pass_input = st.text_input("Password", type="password").strip()
+        submit_button = st.form_submit_button("Login")
+
+        if submit_button:
+            if user_input == APP_USER and pass_input == APP_PASSWORD:
+                st.session_state.authenticated = True
+                st.success("Login Successful!")
+                st.rerun()
+            else:
+                st.error("Invalid Username or Password")
     st.stop()
 
 # ----------------- SIMPLE LOGIN AUTHENTICATION -----------------
