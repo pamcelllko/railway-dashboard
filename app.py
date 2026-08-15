@@ -43,12 +43,14 @@ def format_session(raw_s):
 def parse_session(fmt_s):
     return fmt_s.replace('-', '')
 
-# ----------------- DATABASE & APP CREDENTIALS -----------------
-SUPABASE_URL = "postgresql://postgres.ggrpypensvabbvpyzqbx:2234723pamcell@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
-
-# App User Credentials
-APP_USER = "StationEarning"
-APP_PASSWORD = "pamcell2234723"
+# ----------------- SECURE CREDENTIALS FROM SECRETS -----------------
+try:
+    SUPABASE_URL = st.secrets["SUPABASE_URL"]
+    APP_USER = st.secrets["APP_USER"]
+    APP_PASSWORD = st.secrets["APP_PASSWORD"]
+except Exception as e:
+    st.error("Secrets not properly configured in Streamlit Cloud Dashboard settings.")
+    st.stop()
 
 # ----------------- SIMPLE LOGIN AUTHENTICATION -----------------
 if "authenticated" not in st.session_state:
