@@ -2,14 +2,14 @@ import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine, text
 
-# Page Configuration
+# ----------------- PAGE CONFIGURATION -----------------
 st.set_page_config(
     page_title="Railway Earning Dashboard", 
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for compact layout
+# ----------------- CUSTOM CSS -----------------
 st.markdown("""
     <style>
         .block-container { padding-top: 1rem !important; padding-bottom: 0rem !important; }
@@ -25,7 +25,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Helper function for Indian Currency/Number Format
+# ----------------- HELPER FUNCTIONS -----------------
 def format_inr(number):
     try:
         if pd.isna(number) or number is None: return "0"
@@ -36,15 +36,24 @@ def format_inr(number):
     except Exception:
         return f"{number}"
 
-# SECURE DATABASE CONNECTION (From Streamlit Secrets)
+def format_session(raw_s):
+    s = str(raw_s).split('.')[0].strip()
+    return f"{s[:4]}-{s[4:]}" if len(s) == 6 else s
+
+def parse_session(fmt_s):
+    return fmt_s.replace('-', '')
+
+# ----------------- DATABASE CONNECTION -----------------
+# Supabase Pooler Connection String
+SUPABASE_URL = "postgresql://postgres.ggrpypensvabbvpyzqbx:pamcelllko2234723@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
+
 @st.cache_resource
 def get_database_connection():
-    db_url = st.secrets["SUPABASE_URL"]
-    return create_engine(db_url, pool_pre_ping=True)
+    return create_engine(SUPABASE_URL, pool_pre_ping=True)
 
 engine = get_database_connection()
 
-# Constants & Mappings
+# ----------------- CONSTANTS & MAPPINGS -----------------
 MONTH_DAYS = {'Apr': 30, 'May': 31, 'Jun': 30, 'Jul': 31, 'Aug': 31, 'Sep': 30, 'Oct': 31, 'Nov': 30, 'Dec': 31, 'Jan': 31, 'Feb': 28, 'Mar': 31}
 MONTH_ORDER = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar']
 QUARTERS = {
@@ -53,13 +62,6 @@ QUARTERS = {
     'Q3 (Oct-Dec)': ['Oct', 'Nov', 'Dec'],
     'Q4 (Jan-Mar)': ['Jan', 'Feb', 'Mar']
 }
-
-def format_session(raw_s):
-    s = str(raw_s).split('.')[0].strip()
-    return f"{s[:4]}-{s[4:]}" if len(s) == 6 else s
-
-def parse_session(fmt_s):
-    return fmt_s.replace('-', '')
 
 st.title("🚄 Station Earning & Traffic Executive Dashboard")
 
@@ -140,7 +142,8 @@ def fetch_total(table_name, filters_list, col_name):
         for sess, m_list in filters_list:
             if not m_list: continue
             m_str = "','".join(m_list)
-            # Step 1: Session Match (e.g. 202526%) & Step 2: Exact Month Match (e.g. 'Apr', 'May')
+            # Criteria 1: Session Match (e.g., 202526%)
+            # Criteria 2: Month Exact Match (e.g., 'Apr', 'May')
             q = f'''
                 SELECT SUM("{col_name}") as val FROM {table_name}
                 WHERE "STATION_CODE" = '{selected_station}' 
@@ -287,11 +290,10 @@ with tab3:
     df_p = fetch_table_filtered('reservation_org')
     
     if not df_b.empty or not df_p.empty:
-        # Normalize column names to upper case internally for safe merging
         if not df_b.empty: df_b.columns = [c.upper() for c in df_b.columns]
         if not df_p.empty: df_p.columns = [c.upper() for c in df_p.columns]
         
-        m_df = pd.merge(df_b, df_p, on=['FMT_SESSION', 'MONTH'], how='outer', suffixes=('_Booking', '_PRS'))
+        m_df = pd.merge(df_b, df_p, on=['FMT_SESSION', 'MONTH'], how='outer', suffixes=('_BOOKING', '_PRS'))
         combined = pd.DataFrame()
         combined['Session'] = m_df['FMT_SESSION']
         combined['Month'] = m_df['MONTH']
