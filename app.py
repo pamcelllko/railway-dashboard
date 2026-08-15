@@ -146,53 +146,115 @@ total_days = sum([MONTH_DAYS.get(m, 30) for m in selected_months])
 
 # ----------------- FAIL-SAFE DATA FETCHING -----------------
 def fetch_exact_data(table_name, station, target_sess, prev_sess, months):
-    if not months: return pd.DataFrame()
+    if not months: 
+        return pd.DataFrame()
     
-    # Simple & Fast Base Query
+    # Baseline query: Fetch station records
     q = f'SELECT * FROM {table_name} WHERE "STATION_CODE" = \'{station}\''
     try:
         with engine.connect() as conn:
             df = pd.read_sql(text(q), conn)
-            if df.empty: return pd.DataFrame()
+            if df.empty: 
+                return pd.DataFrame()
             
-            # 1. Column Uniformity
-            df.columns = [c.upper().strip() for c in df.columns]
+            # Clean column names
+            df.columns = [str(c).upper().strip() for c in df.columns]
             
-            # 2. Robust Session Filtering
-            if 'SESSION' in df.columns:
+            if 'SESSION' in df.columns and 'MONTH' in df.columns:
+                # Format Session string cleanly (remove .0 if float)
                 df['SESS_STR'] = df['SESSION'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+                df['MONTH_CLEAN'] = df['MONTH'].astype(str).str.strip().str.title()
                 
-                # Check for Jan-Mar cross session filter
+                # Separate Jan-Mar (which belong to Previous Financial Year Session)
                 jan_mar = [m for m in months if m in ['Jan', 'Feb', 'Mar']]
                 apr_dec = [m for m in months if m not in ['Jan', 'Feb', 'Mar']]
                 
-                conds = []
-                if apr_dec:
-                    conds.append((df['SESS_STR'] == str(target_sess)) & (df['MONTH'].str.strip().str.title().isin(apr_dec)))
-                if jan_mar:
-                    conds.append((df['SESS_STR'] == str(target_sess)) & (df['MONTH'].str.strip().str.title().isin(jan_mar)))
+                cond_list = []
                 
-                if conds:
-                    final_cond = conds[0]
-                    for c in conds[1:]:
+                # Apr-Dec check with selected target session
+                if apr_dec:
+                    cond_list.append(
+                        (df['SESS_STR'] == str(target_sess)) & (df['MONTH_CLEAN'].isin(apr_dec))
+                    )
+                
+                # Jan-Mar check with previous session (e.g. 202526)
+                if jan_mar:
+                    cond_list.append(
+                        (df['SESS_STR'] == str(prev_sess)) & (df['MONTH_CLEAN'].isin(jan_mar))
+                    )
+                
+                if cond_list:
+                    final_cond = cond_list[0]
+                    for c in cond_list[1:]:
                         final_cond = final_cond | c
                     df = df[final_cond]
-                else:
-                    df = df[df['SESS_STR'] == str(target_sess)]
-            
-            # 3. Month Clean Up
-            if 'MONTH' in df.columns and not df.empty:
-                df['MONTH'] = df['MONTH'].astype(str).str.strip().str.title()
-                df = df[df['MONTH'].isin(months)]
                 
-            # 4. Numeric Formatting
+                # Standardize Month column output
+                df['MONTH'] = df['MONTH_CLEAN']
+            
+            # Numeric conversion
             num_cols = ['PASSENGER', 'PASSENGERS', 'EARNING', 'EARNINGS', 'OW_FRIEGHT', 'NET_CASH']
             for col in num_cols:
                 if col in df.columns:
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
             
             return df.drop_duplicates()
-    except Exception:
+    except Exception as e:
+        return pd.DataFrame()def fetch_exact_data(table_name, station, target_sess, prev_sess, months):
+    if not months: 
+        return pd.DataFrame()
+    
+    # Baseline query: Fetch station records
+    q = f'SELECT * FROM {table_name} WHERE "STATION_CODE" = \'{station}\''
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql(text(q), conn)
+            if df.empty: 
+                return pd.DataFrame()
+            
+            # Clean column names
+            df.columns = [str(c).upper().strip() for c in df.columns]
+            
+            if 'SESSION' in df.columns and 'MONTH' in df.columns:
+                # Format Session string cleanly (remove .0 if float)
+                df['SESS_STR'] = df['SESSION'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+                df['MONTH_CLEAN'] = df['MONTH'].astype(str).str.strip().str.title()
+                
+                # Separate Jan-Mar (which belong to Previous Financial Year Session)
+                jan_mar = [m for m in months if m in ['Jan', 'Feb', 'Mar']]
+                apr_dec = [m for m in months if m not in ['Jan', 'Feb', 'Mar']]
+                
+                cond_list = []
+                
+                # Apr-Dec check with selected target session
+                if apr_dec:
+                    cond_list.append(
+                        (df['SESS_STR'] == str(target_sess)) & (df['MONTH_CLEAN'].isin(apr_dec))
+                    )
+                
+                # Jan-Mar check with previous session (e.g. 202526)
+                if jan_mar:
+                    cond_list.append(
+                        (df['SESS_STR'] == str(prev_sess)) & (df['MONTH_CLEAN'].isin(jan_mar))
+                    )
+                
+                if cond_list:
+                    final_cond = cond_list[0]
+                    for c in cond_list[1:]:
+                        final_cond = final_cond | c
+                    df = df[final_cond]
+                
+                # Standardize Month column output
+                df['MONTH'] = df['MONTH_CLEAN']
+            
+            # Numeric conversion
+            num_cols = ['PASSENGER', 'PASSENGERS', 'EARNING', 'EARNINGS', 'OW_FRIEGHT', 'NET_CASH']
+            for col in num_cols:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            
+            return df.drop_duplicates()
+    except Exception as e:
         return pd.DataFrame()
 
 # Fetch Cleaned Data
