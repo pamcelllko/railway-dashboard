@@ -43,10 +43,31 @@ def format_session(raw_s):
 def parse_session(fmt_s):
     return fmt_s.replace('-', '')
 
-# ----------------- DATABASE CONNECTION -----------------
-# Supabase Pooler Connection String
-SUPABASE_URL = "postgresql://postgres.ggrpypensvabbvpyzqbx:pamcelllko2234723@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
+# ----------------- DATABASE & APP CREDENTIALS -----------------
+SUPABASE_URL = "postgresql://postgres.ggrpypensvabbvpyzqbx:2234723pamcell@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
 
+# App User Credentials
+APP_USER = "StationEarning"
+APP_PASSWORD = "pamcell2234723"
+
+# ----------------- SIMPLE LOGIN AUTHENTICATION -----------------
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.title("🔒 Station Earning Dashboard Login")
+    user_input = st.text_input("Username")
+    pass_input = st.text_input("Password", type="password")
+    if st.button("Login"):
+        if user_input == APP_USER and pass_input == APP_PASSWORD:
+            st.session_state.authenticated = True
+            st.success("Login Successful!")
+            st.rerun()
+        else:
+            st.error("Invalid Username or Password")
+    st.stop()
+
+# ----------------- DATABASE CONNECTION -----------------
 @st.cache_resource
 def get_database_connection():
     return create_engine(SUPABASE_URL, pool_pre_ping=True)
@@ -67,6 +88,9 @@ st.title("🚄 Station Earning & Traffic Executive Dashboard")
 
 # ----------------- SIDEBAR FILTERS -----------------
 st.sidebar.header("🔍 Filter Options")
+if st.sidebar.button("Logout"):
+    st.session_state.authenticated = False
+    st.rerun()
 
 # Fetch Stations
 try:
@@ -135,15 +159,15 @@ else: # Rolling Filters
 
 total_days = sum([sum([MONTH_DAYS.get(m, 30) for m in m_list]) for _, m_list in query_filters_curr])
 
-# ----------------- 2-CRITERIA DATA FETCHING -----------------
+# ----------------- 2-CRITERIA DATA FETCHING (SESSION + MONTH) -----------------
 def fetch_total(table_name, filters_list, col_name):
     total = 0.0
     with engine.connect() as conn:
         for sess, m_list in filters_list:
             if not m_list: continue
             m_str = "','".join(m_list)
-            # Criteria 1: Session Match (e.g., 202526%)
-            # Criteria 2: Month Exact Match (e.g., 'Apr', 'May')
+            # 1st Criteria: CAST("SESSION" AS TEXT) LIKE '202526%'
+            # 2nd Criteria: "MONTH" IN ('Apr', 'May', ...)
             q = f'''
                 SELECT SUM("{col_name}") as val FROM {table_name}
                 WHERE "STATION_CODE" = '{selected_station}' 
