@@ -44,7 +44,6 @@ def parse_session(fmt_s):
     return fmt_s.replace('-', '')
 
 # ----------------- SECURE CREDENTIALS FROM SECRETS -----------------
-# Fallback Credentials (अगर Secrets लोड न हों तो ये काम करेंगे)
 APP_USER = st.secrets.get("APP_USER", "StationEarning").strip()
 APP_PASSWORD = st.secrets.get("APP_PASSWORD", "pamcell2234723").strip()
 SUPABASE_URL = st.secrets.get("SUPABASE_URL", "postgresql://postgres.ggrpypensvabbvpyzqbx:2234723pamcell@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres").strip()
@@ -55,7 +54,6 @@ if "authenticated" not in st.session_state:
 
 if not st.session_state.authenticated:
     st.title("🔒 Station Earning Dashboard Login")
-    
     with st.form("login_form"):
         user_input = st.text_input("Username").strip()
         pass_input = st.text_input("Password", type="password").strip()
@@ -70,29 +68,22 @@ if not st.session_state.authenticated:
                 st.error("Invalid Username or Password")
     st.stop()
 
-# ----------------- SIMPLE LOGIN AUTHENTICATION -----------------
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-
-if not st.session_state.authenticated:
-    st.title("🔒 Station Earning Dashboard Login")
-    user_input = st.text_input("Username")
-    pass_input = st.text_input("Password", type="password")
-    if st.button("Login"):
-        if user_input == APP_USER and pass_input == APP_PASSWORD:
-            st.session_state.authenticated = True
-            st.success("Login Successful!")
-            st.rerun()
-        else:
-            st.error("Invalid Username or Password")
-    st.stop()
-
 # ----------------- DATABASE CONNECTION -----------------
 @st.cache_resource
 def get_database_connection():
     return create_engine(SUPABASE_URL, pool_pre_ping=True)
 
 engine = get_database_connection()
+
+# ----------------- DYNAMIC COLUMN FINDER -----------------
+def get_station_col(conn, table_name='booking'):
+    try:
+        cols = pd.read_sql(text(f'SELECT * FROM {table_name} LIMIT 1'), conn).columns
+        for c in cols:
+            if c.upper() in ['STATION_COD', 'STATION_CODE', 'STN_CODE']:
+                return c
+    except Exception: pass
+    return 'STATION_COD'
 
 # ----------------- CONSTANTS & MAPPINGS -----------------
 MONTH_DAYS = {'Apr': 30, 'May': 31, 'Jun': 30, 'Jul': 31, 'Aug': 31, 'Sep': 30, 'Oct': 31, 'Nov': 30, 'Dec': 31, 'Jan': 31, 'Feb': 28, 'Mar': 31}
@@ -115,7 +106,8 @@ if st.sidebar.button("Logout"):
 # Fetch Stations
 try:
     with engine.connect() as conn:
-        stns = sorted(pd.read_sql(text('SELECT DISTINCT "STATION_CODE" FROM booking'), conn)['STATION_CODE'].dropna().unique().tolist())
+        stn_col = get_station_col(conn, 'booking')
+        stns = sorted(pd.read_sql(text(f'SELECT DISTINCT "{stn_col}" FROM booking'), conn)[stn_col].dropna().unique().tolist())
     selected_station = st.sidebar.selectbox("Select Station", stns)
 except Exception as e:
     st.error(f"Error loading stations: {e}"); st.stop()
@@ -179,19 +171,19 @@ else: # Rolling Filters
 
 total_days = sum([sum([MONTH_DAYS.get(m, 30) for m in m_list]) for _, m_list in query_filters_curr])
 
-# ----------------- 2-CRITERIA DATA FETCHING (SESSION + MONTH) -----------------
+# ----------------- EXACT 2-CRITERIA DATA FETCHING -----------------
 def fetch_total(table_name, filters_list, col_name):
     total = 0.0
     with engine.connect() as conn:
+        stn_c = get_station_col(conn, table_name)
         for sess, m_list in filters_list:
             if not m_list: continue
             m_str = "','".join(m_list)
-            # 1st Criteria: CAST("SESSION" AS TEXT) LIKE '202526%'
-            # 2nd Criteria: "MONTH" IN ('Apr', 'May', ...)
+            # Match STATION_COD, SESSION (int/str), and MONTH ('Apr','May'...)
             q = f'''
                 SELECT SUM("{col_name}") as val FROM {table_name}
-                WHERE "STATION_CODE" = '{selected_station}' 
-                  AND CAST("SESSION" AS TEXT) LIKE '{sess}%' 
+                WHERE "{stn_c}" = '{selected_station}' 
+                  AND (CAST("SESSION" AS TEXT) = '{sess}' OR "SESSION" = {sess})
                   AND "MONTH" IN ('{m_str}')
             '''
             try:
@@ -200,7 +192,6 @@ def fetch_total(table_name, filters_list, col_name):
             except Exception: pass
     return total
 
-# Dynamic Column Resolver for Passenger Counts
 def get_pass_col(table_name):
     try:
         with engine.connect() as conn:
@@ -238,7 +229,6 @@ comb_ear_prev = b_ear_prev + p_ear_prev
 st.markdown(f"### 📍 Station: **{selected_station}** | Period: **{display_period_text}**")
 st.caption(f"🗓️ Current Period vs Previous Year Period ({total_days} Days Selected)")
 
-# Metric Columns
 c1, c2, c3, c4, c5 = st.columns([1.2, 1, 1, 1, 1])
 
 with c1:
@@ -276,13 +266,14 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 def fetch_table_filtered(table_name):
     frames = []
     with engine.connect() as conn:
+        stn_c = get_station_col(conn, table_name)
         for sess, m_list in query_filters_curr:
             if not m_list: continue
             m_str = "','".join(m_list)
             q = f'''
                 SELECT * FROM {table_name} 
-                WHERE "STATION_CODE" = '{selected_station}' 
-                  AND CAST("SESSION" AS TEXT) LIKE '{sess}%' 
+                WHERE "{stn_c}" = '{selected_station}' 
+                  AND (CAST("SESSION" AS TEXT) = '{sess}' OR "SESSION" = {sess})
                   AND "MONTH" IN ('{m_str}')
             '''
             try:
@@ -295,7 +286,7 @@ def fetch_table_filtered(table_name):
     if not frames: return pd.DataFrame()
         
     full_df = pd.concat(frames, ignore_index=True)
-    drop_cols = ['STATION_CODE', 'SESSION', 'station_code', 'session']
+    drop_cols = ['STATION_CODE', 'STATION_COD', 'SESSION', 'station_code', 'station_cod', 'session']
     full_df = full_df.drop(columns=[c for c in drop_cols if c in full_df.columns])
     
     if 'MONTH' in full_df.columns:
@@ -317,7 +308,6 @@ def render_table_with_totals(df, title):
     
     df_totals = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
     
-    # Format all numeric columns to Indian style numbers
     for c in num_cols:
         df_totals[c] = df_totals[c].apply(lambda x: format_inr(x) if pd.notnull(x) else x)
 
