@@ -108,19 +108,17 @@ except Exception:
 
 selected_station = st.sidebar.selectbox("Select Station", stns)
 
-# Session Options
-session_options = ["2025-26", "2026-27", "2024-25"]
-selected_fmt_session = st.sidebar.selectbox("Select Session", session_options)
+# Session Mapping (UI shows formatted, backend converts to database format like 202526)
+session_map = {
+    "2025-26": "202526",
+    "2024-25": "202425",
+    "2023-24": "202324",
+    "2022-23": "202223",
+    "2026-27": "202627"
+}
 
-curr_yr = int(selected_fmt_session.split('-')[0])
-target_year_short = str(curr_yr)[2:] + str(curr_yr+1)[2:]  # 2526
-target_year_full = f"{curr_yr}-{str(curr_yr+1)[2:]}"       # 2025-26
-target_year_code = f"{curr_yr}{str(curr_yr+1)[2:]}"        # 202526
-
-prev_yr = curr_yr - 1
-prev_year_short = str(prev_yr)[2:] + str(curr_yr)[2:]      # 2425
-prev_year_full = f"{prev_yr}-{str(curr_yr)[2:]}"          # 2024-25
-prev_year_code = f"{prev_yr}{str(curr_yr)[2:]}"           # 202425
+selected_fmt_session = st.sidebar.selectbox("Select Session", list(session_map.keys()))
+db_session_code = session_map[selected_fmt_session]  # Database exact string, e.g. "202526"
 
 # Time Filters
 filter_type = st.sidebar.radio("Time Filter Type", ["Quarterly", "6 Months", "Full Year", "Last 3 Months", "Last 6 Months", "Custom Months"])
@@ -150,65 +148,32 @@ else:
 
 total_days = sum([MONTH_DAYS.get(m, 30) for m in selected_months])
 
-# ----------------- SMART ROBUST DATA FETCHING -----------------
-def fetch_exact_data(table_name, station, selected_sess_str, months):
+# ----------------- DIRECT EXACT DATABASE FETCHING -----------------
+def fetch_exact_data(table_name, station, target_session, months):
     if not months:
         return pd.DataFrame()
     
-    q = f'SELECT * FROM {table_name}'
+    # Clean SQL Fetch directly matching station code and exact database session (e.g., 202526)
+    q = f'SELECT * FROM {table_name} WHERE "STATION_CODE" = \'{station}\' AND ("SESSION"::text = \'{target_session}\' OR "SESSION"::text = \'{target_session}.0\')'
     try:
         with engine.connect() as conn:
             df = pd.read_sql(text(q), conn)
             if df.empty:
                 return pd.DataFrame()
             
+            # Standardize Column Headers to Uppercase
             df.columns = [str(c).upper().strip() for c in df.columns]
             
-            # 1. Clean Station Filter
-            if 'STATION_CODE' in df.columns:
-                df['STATION_CLEAN'] = df['STATION_CODE'].astype(str).str.strip().str.upper()
-                df = df[df['STATION_CLEAN'] == str(station).strip().upper()]
-            
+            # Filter by selected Month list (Exact Match: Apr, May, etc.)
+            if 'MONTH' in df.columns:
+                df['MONTH_CLEAN'] = df['MONTH'].astype(str).str.strip().str.title()
+                df = df[df['MONTH_CLEAN'].isin(months)]
+                df['MONTH'] = df['MONTH_CLEAN']
+
             if df.empty:
                 return pd.DataFrame()
 
-            # 2. Flexible Session Filter (Matches 202526, 2025-26, 2526, 2025, etc.)
-            if 'SESSION' in df.columns:
-                df['SESS_CLEAN'] = df['SESSION'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-                
-                # Check for Jan-Mar cross session
-                jan_mar = [m for m in months if m in ['Jan', 'Feb', 'Mar']]
-                apr_dec = [m for m in months if m not in ['Jan', 'Feb', 'Mar']]
-                
-                # Target Session variants (e.g., '202526', '2025-26', '2526')
-                target_vars = [target_year_code, target_year_full, target_year_short, str(curr_yr)]
-                prev_vars = [prev_year_code, prev_year_full, prev_year_short, str(prev_yr)]
-
-                cond_list = []
-                if 'MONTH' in df.columns:
-                    df['MONTH_CLEAN'] = df['MONTH'].astype(str).str.strip().str.title()
-                    
-                    if apr_dec:
-                        cond_list.append(
-                            (df['SESS_CLEAN'].isin(target_vars)) & (df['MONTH_CLEAN'].isin(apr_dec))
-                        )
-                    if jan_mar:
-                        cond_list.append(
-                            (df['SESS_CLEAN'].isin(prev_vars)) & (df['MONTH_CLEAN'].isin(jan_mar))
-                        )
-                else:
-                    cond_list.append(df['SESS_CLEAN'].isin(target_vars))
-
-                if cond_list:
-                    final_cond = cond_list[0]
-                    for c in cond_list[1:]:
-                        final_cond = final_cond | c
-                    df = df[final_cond]
-
-                if 'MONTH_CLEAN' in df.columns:
-                    df['MONTH'] = df['MONTH_CLEAN']
-
-            # Numeric conversion
+            # Numeric conversion for columns
             num_cols = ['PASSENGER', 'PASSENGERS', 'EARNING', 'EARNINGS', 'OW_FRIEGHT', 'NET_CASH']
             for col in num_cols:
                 if col in df.columns:
@@ -218,11 +183,11 @@ def fetch_exact_data(table_name, station, selected_sess_str, months):
     except Exception as e:
         return pd.DataFrame()
 
-# Fetch Cleaned Data
-df_booking = fetch_exact_data('booking', selected_station, selected_fmt_session, selected_months)
-df_prs_org = fetch_exact_data('reservation_org', selected_station, selected_fmt_session, selected_months)
-df_goods = fetch_exact_data('goods', selected_station, selected_fmt_session, selected_months)
-df_parcel = fetch_exact_data('parcel', selected_station, selected_fmt_session, selected_months)
+# Fetch Exact Data
+df_booking = fetch_exact_data('booking', selected_station, db_session_code, selected_months)
+df_prs_org = fetch_exact_data('reservation_org', selected_station, db_session_code, selected_months)
+df_goods = fetch_exact_data('goods', selected_station, db_session_code, selected_months)
+df_parcel = fetch_exact_data('parcel', selected_station, db_session_code, selected_months)
 
 pass_col_b = 'PASSENGER' if 'PASSENGER' in df_booking.columns else ('PASSENGERS' if 'PASSENGERS' in df_booking.columns else None)
 pass_col_p = 'PASSENGER' if 'PASSENGER' in df_prs_org.columns else ('PASSENGERS' if 'PASSENGERS' in df_prs_org.columns else None)
@@ -278,7 +243,7 @@ def render_table_clean(df, title):
         st.info(f"No records found for {title} in Session {selected_fmt_session}.")
         return
         
-    drop_cols = ['STATION_CODE', 'SESSION', 'SESS_CLEAN', 'MONTH_CLEAN', 'STATION_CLEAN']
+    drop_cols = ['STATION_CODE', 'SESSION', 'MONTH_CLEAN']
     clean_df = df.drop(columns=[c for c in drop_cols if c in df.columns], errors='ignore')
     
     if 'MONTH' in clean_df.columns:
@@ -322,7 +287,7 @@ with tab3:
 with tab4: render_table_clean(df_goods, "Goods")
 with tab5: render_table_clean(df_parcel, "Parcel")
 with tab6:
-    df_res = fetch_exact_data('reservation', selected_station, selected_fmt_session, selected_months)
+    df_res = fetch_exact_data('reservation', selected_station, db_session_code, selected_months)
     if 'NET_CASH' in df_res.columns:
         df_res = df_res.rename(columns={'NET_CASH': 'EARNING (NET_CASH)'})
     render_table_clean(df_res, "Reservation")
