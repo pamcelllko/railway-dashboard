@@ -6,7 +6,7 @@ import bcrypt
 
 # ----------------- PAGE CONFIGURATION -----------------
 st.set_page_config(
-    page_title="Railway Earning & Traffic Executive Dashboard", 
+    page_title="Railway Earning Executive Dashboard", 
     page_icon="🚄",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -50,127 +50,148 @@ def verify_user(username, password):
         return bcrypt.checkpw(password.encode('utf-8'), row[0].encode('utf-8'))
     return False
 
-# ----------------- CUSTOM PROFESSIONAL CSS -----------------
+# ----------------- ADVANCED PROFESSIONAL CSS -----------------
 st.markdown("""
     <style>
-        /* Main Layout & Density Optimizations for Zero Scroll */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        /* Main Container Padding to Stop Clipping */
         .block-container { 
-            padding-top: 1rem !important; 
-            padding-bottom: 0.5rem !important;
-            max-width: 98% !important;
+            padding-top: 2rem !important; 
+            padding-bottom: 1rem !important;
+            padding-left: 2rem !important;
+            padding-right: 2rem !important;
+            max-width: 100% !important;
         }
         
-        /* Typography */
+        /* High Quality Typography */
         html, body, [class*="css"] {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            -webkit-font-smoothing: antialiased;
         }
         
-        /* Metric Card Container Styling */
+        /* Header Banner Styling */
+        .header-banner {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #ffffff;
+            padding: 16px 24px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+            border: 1px solid #334155;
+        }
+        .header-title {
+            font-size: 1.25rem !important;
+            font-weight: 800 !important;
+            letter-spacing: 0.5px;
+            color: #ffffff !important;
+            margin: 0 !important;
+            line-height: 1.3 !important;
+        }
+        
+        /* Equal Height Metric Boxes */
         .metric-card {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 12px;
-            padding: 12px 8px;
+            padding: 14px 10px;
             text-align: center !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
             transition: all 0.2s ease-in-out;
-            height: 100%;
+            min-height: 145px !important;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
         }
         .metric-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
             border-color: #cbd5e1;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
         }
-        
         .metric-title {
-            font-size: 0.82rem;
+            font-size: 0.78rem;
             font-weight: 700;
-            color: #334155;
+            color: #475569;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
-            text-align: center;
+            letter-spacing: 0.6px;
         }
         .metric-value {
-            font-size: 1.25rem;
+            font-size: 1.3rem;
             font-weight: 800;
             color: #0f172a;
-            margin: 2px 0;
-            text-align: center;
+            letter-spacing: -0.3px;
+            margin: 4px 0;
         }
         .metric-sub {
-            font-size: 0.75rem;
+            font-size: 0.73rem;
             color: #64748b;
             font-weight: 500;
-            text-align: center;
         }
         .metric-delta-pos {
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             font-weight: 700;
-            color: #16a34a;
+            color: #15803d;
             background-color: #dcfce7;
-            padding: 2px 6px;
-            border-radius: 12px;
+            padding: 3px 10px;
+            border-radius: 20px;
             display: inline-block;
-            margin-top: 4px;
         }
         .metric-delta-neg {
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             font-weight: 700;
-            color: #dc2626;
+            color: #b91c1c;
             background-color: #fee2e2;
-            padding: 2px 6px;
-            border-radius: 12px;
+            padding: 3px 10px;
+            border-radius: 20px;
             display: inline-block;
-            margin-top: 4px;
         }
 
-        /* Tabs Styling */
+        /* Pill Shaped Tab Styling */
         .stTabs [data-baseweb="tab-list"] {
-            gap: 8px;
-            border-bottom: 2px solid #e2e8f0;
+            gap: 12px !important;
+            border-bottom: none !important;
+            margin-bottom: 12px !important;
         }
         .stTabs [data-baseweb="tab"] {
             height: 38px;
-            padding: 0 16px;
-            font-weight: 600;
-            border-radius: 6px 6px 0 0;
-            color: #64748b;
+            padding: 0 20px !important;
+            font-weight: 600 !important;
+            font-size: 0.85rem !important;
+            border-radius: 20px !important; /* Pills shape */
+            color: #475569 !important;
+            background-color: #f1f5f9 !important;
+            border: 1px solid #e2e8f0 !important;
+            transition: all 0.2s ease;
         }
         .stTabs [aria-selected="true"] {
-            background-color: #1e293b !important;
+            background-color: #0f172a !important;
             color: #ffffff !important;
+            border-color: #0f172a !important;
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
         }
 
-        /* Center Align Table Content & Headers */
+        /* Table Alignment & Auto-Wrap */
         div[data-testid="stDataFrame"] table {
-            text-align: center !important;
             width: 100% !important;
         }
         div[data-testid="stDataFrame"] th {
             text-align: center !important;
-            background-color: #f1f5f9 !important;
+            background-color: #f8fafc !important;
             color: #1e293b !important;
             font-weight: 700 !important;
-            font-size: 0.8rem !important;
-            padding: 6px !important;
+            font-size: 0.78rem !important;
+            white-space: normal !important; /* Text Wrap in Headers */
+            word-wrap: break-word !important;
+            padding: 8px 4px !important;
         }
         div[data-testid="stDataFrame"] td {
             text-align: center !important;
             font-size: 0.8rem !important;
-            padding: 4px 6px !important;
-        }
-        
-        /* Compact Header Banner */
-        .header-banner {
-            background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%);
-            color: white;
-            padding: 10px 18px;
-            border-radius: 10px;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            white-space: normal !important;
+            padding: 6px 4px !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -207,14 +228,14 @@ def parse_session(fmt_s):
 # ----------------- SECURE DATABASE CREDENTIALS -----------------
 SUPABASE_URL = st.secrets.get("SUPABASE_URL", "postgresql://postgres.ggrpypensvabbvpyzqbx:2234723pamcell@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres").strip()
 
-# ----------------- AUTHENTICATION PAGE (LOGIN / SIGNUP) -----------------
+# ----------------- AUTHENTICATION PAGE -----------------
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "username" not in st.session_state:
     st.session_state.username = ""
 
 if not st.session_state.authenticated:
-    st.markdown("<h2 style='text-align: center; color: #0f172a;'>🚄 Railway Earning Dashboard Access</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: #0f172a; margin-top: 10px; font-weight:800;'>🚄 Railway Earning Dashboard Access</h2>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 1.2, 1])
     with col2:
@@ -440,16 +461,18 @@ comb_ear_prev = b_ear_prev + p_ear_prev
 st.markdown(f"""
     <div class="header-banner">
         <div>
-            <h3 style="margin:0; font-weight:800; font-size:1.2rem;">🚄 STATION EARNING & TRAFFIC EXECUTIVE DASHBOARD</h3>
-            <span style="font-size:0.8rem; opacity:0.85;">Station: <b>{selected_station}</b> | Session: <b>{selected_fmt_session}</b> | {display_period_text}</span>
+            <div class="header-title">🚄 STATION EARNING & TRAFFIC EXECUTIVE DASHBOARD</div>
+            <div style="font-size:0.83rem; color: #cbd5e1; margin-top: 3px;">
+                Station: <b style="color:#fff;">{selected_station}</b> | Session: <b style="color:#fff;">{selected_fmt_session}</b> | {display_period_text}
+            </div>
         </div>
-        <div style="text-align:right; font-size:0.8rem; opacity:0.9;">
+        <div style="text-align:right; font-size:0.85rem; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 8px;">
             🗓️ <b>{total_days} Days Selected</b>
         </div>
     </div>
 """, unsafe_allow_html=True)
 
-# ----------------- CENTERED TOP METRIC CARDS -----------------
+# ----------------- CENTERED EQUAL-SIZE METRIC CARDS -----------------
 c1, c2, c3, c4, c5 = st.columns(5)
 
 def render_centered_metric(col, title, curr, prev, days, is_combined=False, pass_val=0):
@@ -460,11 +483,11 @@ def render_centered_metric(col, title, curr, prev, days, is_combined=False, pass
     if is_combined:
         pass_per_day = pass_val / days if days > 0 else 0
         content = f"""
-            <div class="metric-card" style="border-left: 4px solid #3b82f6;">
+            <div class="metric-card" style="border-top: 3px solid #2563eb;">
                 <div class="metric-title">👥 COMBINED PASSENGER</div>
                 <div class="metric-value">₹ {format_inr(curr)}</div>
-                <div class="metric-sub"><b>Pass:</b> {format_inr(pass_val)} | <b>P/Day:</b> {format_inr(pass_per_day)}</div>
-                <div class="metric-sub"><b>Ear/Day:</b> ₹ {format_inr(per_day)}</div>
+                <div class="metric-sub">Pass: {format_inr(pass_val)} | P/Day: {format_inr(pass_per_day)}</div>
+                <div class="metric-sub">Ear/Day: ₹ {format_inr(per_day)}</div>
                 <div class="{delta_class}">{growth:+.1f}% vs Prev. Year</div>
             </div>
         """
@@ -473,7 +496,8 @@ def render_centered_metric(col, title, curr, prev, days, is_combined=False, pass
             <div class="metric-card">
                 <div class="metric-title">{title}</div>
                 <div class="metric-value">₹ {format_inr(curr)}</div>
-                <div class="metric-sub"><b>Ear/Day:</b> ₹ {format_inr(per_day)}</div>
+                <div style="flex-grow:1;"></div>
+                <div class="metric-sub">Ear/Day: ₹ {format_inr(per_day)}</div>
                 <div class="{delta_class}">{growth:+.1f}% vs Prev. Year</div>
             </div>
         """
@@ -485,9 +509,9 @@ render_centered_metric(c3, "PRS ORG EARNING", p_ear_curr, p_ear_prev, total_days
 render_centered_metric(c4, "GOODS FREIGHT", g_ear_curr, g_ear_prev, total_days)
 render_centered_metric(c5, "PARCEL FREIGHT", pr_ear_curr, pr_ear_prev, total_days)
 
-st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
-# ----------------- COMPACT DETAILED TABLES -----------------
+# ----------------- PILL SHAPED TABS & DATA TABLES -----------------
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Booking", "PRS Org", "Combined Passenger", "Goods", "Parcel", "Reservation"
 ])
@@ -541,15 +565,25 @@ def render_table_with_totals(df, title):
     
     df_totals = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
     
+    # Format Numbers to INR
     for c in num_cols:
         df_totals[c] = df_totals[c].apply(lambda x: format_inr(x) if pd.notnull(x) else x)
 
-    # Render table optimized for no vertical/horizontal scrolling
+    # Column Formatting & Right Alignment for Earnings/Financial Data
+    column_config = {}
+    for col in df_totals.columns:
+        col_upper = col.upper()
+        if any(keyword in col_upper for keyword in ['EARNING', 'FREIGHT', 'AMOUNT', 'PASSENGER', 'CASH']):
+            column_config[col] = st.column_config.TextColumn(col, alignment="right")
+        else:
+            column_config[col] = st.column_config.TextColumn(col, alignment="center")
+
     st.dataframe(
         df_totals, 
         use_container_width=True, 
         hide_index=True,
-        height=min(420, (len(df_totals) + 1) * 35) # Dynamic height fitting screen perfectly
+        column_config=column_config,
+        height=min(400, (len(df_totals) + 1) * 36)
     )
 
 with tab1:
