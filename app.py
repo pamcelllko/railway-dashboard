@@ -28,20 +28,33 @@ st.markdown("""
 # ----------------- HELPER FUNCTIONS -----------------
 def format_inr(number):
     try:
-        if pd.isna(number) or number is None: return "0"
-        val = float(number)
-        s, *d = str(f"{val:.0f}").partition(".")
-        r = ",".join([s[x-2:x] for x in range(3, len(s)+1, 2)][::-1] + [s[-3:]])
-        return "".join([r] + d) if len(s) > 3 else s
+        if pd.isna(number) or number is None: 
+            return "0"
+        val = round(float(number))
+        is_negative = val < 0
+        s = str(abs(val))
+        if len(s) <= 3:
+            res = s
+        else:
+            res = s[-3:]
+            s = s[:-3]
+            while len(s) > 0:
+                res = s[-2:] + "," + res
+                s = s[:-2]
+        return f"-{res}" if is_negative else res
     except Exception:
-        return f"{number}"
+        return str(number)
 
 def format_session(raw_s):
+    """Converts 200001 -> 2000-01"""
     s = str(raw_s).split('.')[0].strip()
-    return f"{s[:4]}-{s[4:]}" if len(s) == 6 else s
+    if len(s) == 6:
+        return f"{s[:4]}-{s[4:]}"
+    return s
 
 def parse_session(fmt_s):
-    return fmt_s.replace('-', '')
+    """Converts 2000-01 -> 200001"""
+    return str(fmt_s).replace('-', '').strip()
 
 # ----------------- SECURE CREDENTIALS FROM SECRETS -----------------
 APP_USER = st.secrets.get("APP_USER", "StationEarning").strip()
@@ -82,7 +95,8 @@ def get_station_col(conn, table_name='booking'):
         for c in cols:
             if c.upper() in ['STATION_COD', 'STATION_CODE', 'STN_CODE']:
                 return c
-    except Exception: pass
+    except Exception: 
+        pass
     return 'STATION_COD'
 
 # ----------------- CONSTANTS & MAPPINGS -----------------
@@ -110,7 +124,8 @@ try:
         stns = sorted(pd.read_sql(text(f'SELECT DISTINCT "{stn_col}" FROM booking'), conn)[stn_col].dropna().unique().tolist())
     selected_station = st.sidebar.selectbox("Select Station", stns)
 except Exception as e:
-    st.error(f"Error loading stations: {e}"); st.stop()
+    st.error(f"Error loading stations: {e}")
+    st.stop()
 
 # Fetch Sessions
 try:
@@ -120,11 +135,13 @@ try:
     selected_fmt_session = st.sidebar.selectbox("Select Session", fmt_sess)
     selected_raw_session = parse_session(selected_fmt_session)
 except Exception as e:
-    st.error(f"Error loading sessions: {e}"); st.stop()
+    st.error(f"Error loading sessions: {e}")
+    st.stop()
 
-curr_yr = int(selected_raw_session[:4])
-prev_raw_session = f"{curr_yr - 1:04d}{int(selected_raw_session[4:]) - 1:02d}"
-prev_fmt_session = format_session(prev_raw_session)
+# Calculate Previous Financial Year Session (e.g. 200102 -> 200001)
+start_yr = int(selected_raw_session[:4])
+end_yr = int(selected_raw_session[4:])
+prev_raw_session = f"{start_yr - 1:04d}{end_yr - 1:02d}"
 
 # Time Filter Options
 filter_type = st.sidebar.radio("Time Filter Type", ["Quarterly", "6 Months", "Full Year", "Last 3 Months", "Last 6 Months", "Custom Months"])
@@ -164,32 +181,34 @@ else: # Rolling Filters
         curr_m_list = MONTH_ORDER[:end_idx + 1]
         
         query_filters_curr = [(prev_raw_session, prev_m_list), (selected_raw_session, curr_m_list)]
-        prev_prev_raw_session = f"{curr_yr - 2:04d}{int(selected_raw_session[4:]) - 2:02d}"
+        prev_prev_raw_session = f"{start_yr - 2:04d}{end_yr - 2:02d}"
         query_filters_prev = [(prev_prev_raw_session, prev_m_list), (prev_raw_session, curr_m_list)]
 
     display_period_text = f"{filter_type} (Ending {end_m})"
 
 total_days = sum([sum([MONTH_DAYS.get(m, 30) for m in m_list]) for _, m_list in query_filters_curr])
 
-# ----------------- EXACT 2-CRITERIA DATA FETCHING -----------------
+# ----------------- DATA FETCHING WITH CASE & SPACE HANDLING -----------------
 def fetch_total(table_name, filters_list, col_name):
     total = 0.0
     with engine.connect() as conn:
         stn_c = get_station_col(conn, table_name)
         for sess, m_list in filters_list:
-            if not m_list: continue
-            m_str = "','".join(m_list)
-            # Match STATION_COD, SESSION (int/str), and MONTH ('Apr','May'...)
+            if not m_list: 
+                continue
+            m_str = "','".join([m.upper() for m in m_list])
             q = f'''
                 SELECT SUM("{col_name}") as val FROM {table_name}
-                WHERE "{stn_c}" = '{selected_station}' 
-                  AND (CAST("SESSION" AS TEXT) = '{sess}' OR "SESSION" = {sess})
-                  AND "MONTH" IN ('{m_str}')
+                WHERE UPPER(TRIM(CAST("{stn_c}" AS TEXT))) = UPPER('{selected_station.strip()}') 
+                  AND CAST("SESSION" AS TEXT) = '{sess}'
+                  AND UPPER(TRIM("MONTH")) IN ('{m_str}')
             '''
             try:
                 val = pd.read_sql(text(q), conn)['val'].iloc[0]
-                if pd.notnull(val): total += float(val)
-            except Exception: pass
+                if pd.notnull(val): 
+                    total += float(val)
+            except Exception as e:
+                st.sidebar.warning(f"Error reading {table_name}: {e}")
     return total
 
 def get_pass_col(table_name):
@@ -199,8 +218,9 @@ def get_pass_col(table_name):
             cols = [c.upper() for c in cols]
             if 'PASSENGERS' in cols: return 'PASSENGERS'
             if 'PASSENGER' in cols: return 'PASSENGER'
-    except Exception: pass
-    return 'PASSENGERS'
+    except Exception: 
+        pass
+    return 'PASSENGER'
 
 pass_col_booking = get_pass_col('booking')
 pass_col_prs = get_pass_col('reservation_org')
@@ -214,11 +234,11 @@ p_ear_curr = fetch_total('reservation_org', query_filters_curr, 'EARNINGS')
 p_ear_prev = fetch_total('reservation_org', query_filters_prev, 'EARNINGS')
 p_pass_curr = fetch_total('reservation_org', query_filters_curr, pass_col_prs)
 
-g_ear_curr = fetch_total('goods', query_filters_curr, 'OW_FRIEGHT')
-g_ear_prev = fetch_total('goods', query_filters_prev, 'OW_FRIEGHT')
+g_ear_curr = fetch_total('goods', query_filters_curr, 'OW_FREIGHT' if 'OW_FREIGHT' in ['OW_FREIGHT'] else 'OW_FRIEGHT')
+g_ear_prev = fetch_total('goods', query_filters_prev, 'OW_FREIGHT' if 'OW_FREIGHT' in ['OW_FREIGHT'] else 'OW_FRIEGHT')
 
-pr_ear_curr = fetch_total('parcel', query_filters_curr, 'OW_FRIEGHT')
-pr_ear_prev = fetch_total('parcel', query_filters_prev, 'OW_FRIEGHT')
+pr_ear_curr = fetch_total('parcel', query_filters_curr, 'OW_FREIGHT' if 'OW_FREIGHT' in ['OW_FREIGHT'] else 'OW_FRIEGHT')
+pr_ear_prev = fetch_total('parcel', query_filters_prev, 'OW_FREIGHT' if 'OW_FREIGHT' in ['OW_FREIGHT'] else 'OW_FRIEGHT')
 
 # Combined Passenger Calculation
 comb_pass_curr = b_pass_curr + p_pass_curr
@@ -268,22 +288,25 @@ def fetch_table_filtered(table_name):
     with engine.connect() as conn:
         stn_c = get_station_col(conn, table_name)
         for sess, m_list in query_filters_curr:
-            if not m_list: continue
-            m_str = "','".join(m_list)
+            if not m_list: 
+                continue
+            m_str = "','".join([m.upper() for m in m_list])
             q = f'''
                 SELECT * FROM {table_name} 
-                WHERE "{stn_c}" = '{selected_station}' 
-                  AND (CAST("SESSION" AS TEXT) = '{sess}' OR "SESSION" = {sess})
-                  AND "MONTH" IN ('{m_str}')
+                WHERE UPPER(TRIM(CAST("{stn_c}" AS TEXT))) = UPPER('{selected_station.strip()}') 
+                  AND CAST("SESSION" AS TEXT) = '{sess}'
+                  AND UPPER(TRIM("MONTH")) IN ('{m_str}')
             '''
             try:
                 df = pd.read_sql(text(q), conn)
                 if not df.empty:
                     df['FMT_SESSION'] = format_session(sess)
                     frames.append(df)
-            except Exception: pass
+            except Exception as e:
+                st.sidebar.warning(f"Table Fetch Error ({table_name}): {e}")
             
-    if not frames: return pd.DataFrame()
+    if not frames: 
+        return pd.DataFrame()
         
     full_df = pd.concat(frames, ignore_index=True)
     drop_cols = ['STATION_CODE', 'STATION_COD', 'SESSION', 'station_code', 'station_cod', 'session']
