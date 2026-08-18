@@ -52,17 +52,41 @@ def verify_user(username, password):
         return bcrypt.checkpw(password.encode('utf-8'), row[0].encode('utf-8'))
     return False
 
-# ----------------- ADVANCED PROFESSIONAL CSS OVERRIDES -----------------
+# ----------------- DYNAMIC DARK/LIGHT MODE & RESPONSIVE CSS -----------------
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         
-        /* Prevent Any Header Clipping */
+        /* Root Dynamic Color Palette */
+        :root {
+            --bg-card: #ffffff;
+            --border-card: #cbd5e1;
+            --text-main: #0f172a;
+            --text-sub: #334155;
+            --text-muted: #64748b;
+            --table-header-bg: #f8fafc;
+            --badge-bg: #f1f5f9;
+        }
+
+        /* Auto Adapt to Dark Mode */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-card: #1e293b;
+                --border-card: #334155;
+                --text-main: #f8fafc;
+                --text-sub: #cbd5e1;
+                --text-muted: #94a3b8;
+                --table-header-bg: #0f172a;
+                --badge-bg: #334155;
+            }
+        }
+
+        /* Streamlit Core Padding Adjustments */
         .block-container { 
-            padding-top: 3.5rem !important; 
+            padding-top: 2.5rem !important; 
             padding-bottom: 1rem !important;
-            padding-left: 1.5rem !important;
-            padding-right: 1.5rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
             max-width: 100% !important;
         }
         
@@ -70,34 +94,35 @@ st.markdown("""
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
             -webkit-font-smoothing: antialiased;
         }
-        
-        /* Header Title Styling */
+
+        /* Header Title Section */
         .main-header-container {
             padding: 4px 0px 14px 0px;
-            border-bottom: 2px solid #cbd5e1;
+            border-bottom: 2px solid var(--border-card);
             margin-bottom: 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            overflow: visible !important;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         .main-title {
-            font-size: 1.5rem !important;
+            font-size: 1.4rem !important;
             font-weight: 900 !important;
-            color: #0f172a !important;
+            color: var(--text-main) !important;
             letter-spacing: -0.3px;
             margin: 0 !important;
             line-height: 1.3 !important;
         }
         .station-subtitle {
-            font-size: 1rem !important;
-            color: #334155 !important;
+            font-size: 0.95rem !important;
+            color: var(--text-sub) !important;
             font-weight: 600 !important;
             margin-top: 4px !important;
         }
         .highlight-badge {
-            background-color: #1e3a8a;
-            color: #ffffff;
+            background-color: #2563eb;
+            color: #ffffff !important;
             padding: 3px 10px;
             border-radius: 6px;
             font-weight: 800;
@@ -105,21 +130,21 @@ st.markdown("""
         .days-badge {
             font-size: 0.85rem;
             font-weight: 800;
-            background-color: #f1f5f9;
-            color: #0f172a;
-            padding: 8px 16px;
+            background-color: var(--badge-bg);
+            color: var(--text-main);
+            padding: 6px 14px;
             border-radius: 8px;
-            border: 1px solid #94a3b8;
+            border: 1px solid var(--border-card);
         }
-        
-        /* Sharp Metric Cards with High Contrast % Comparison */
+
+        /* Metric Cards - Dynamic High Contrast */
         .metric-card {
-            background: #ffffff;
-            border: 1px solid #cbd5e1;
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
             border-radius: 12px;
             padding: 12px 6px;
             text-align: center !important;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.06);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08);
             min-height: 145px !important;
             display: flex;
             flex-direction: column;
@@ -129,74 +154,75 @@ st.markdown("""
         .metric-title {
             font-size: 0.76rem;
             font-weight: 800;
-            color: #1e293b;
+            color: var(--text-sub);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         .metric-value {
-            font-size: 1.3rem;
+            font-size: 1.25rem;
             font-weight: 900;
-            color: #0f172a;
+            color: var(--text-main);
             letter-spacing: -0.5px;
             margin: 2px 0;
         }
         .metric-sub {
             font-size: 0.74rem;
-            color: #334155;
+            color: var(--text-muted);
             font-weight: 600;
             margin-bottom: 2px;
         }
         .metric-delta-pos {
             font-size: 0.78rem !important;
             font-weight: 900 !important;
-            color: #065f46 !important;
-            background-color: #a7f3d0 !important;
+            color: #15803d !important;
+            background-color: #dcfce7 !important;
             padding: 3px 12px !important;
             border-radius: 20px !important;
-            border: 1px solid #059669 !important;
+            border: 1px solid #16a34a !important;
         }
         .metric-delta-neg {
             font-size: 0.78rem !important;
             font-weight: 900 !important;
-            color: #7f1d1d !important;
-            background-color: #fecaca !important;
+            color: #b91c1c !important;
+            background-color: #fee2e2 !important;
             padding: 3px 12px !important;
             border-radius: 20px !important;
-            border: 1px solid #dc2626 !important;
+            border: 1px solid #ef4444 !important;
         }
 
-        /* Pill Tabs */
+        /* Pill Shape Tabs */
         .stTabs [data-baseweb="tab-list"] {
-            gap: 10px !important;
+            gap: 8px !important;
             border-bottom: none !important;
             margin-bottom: 12px !important;
+            flex-wrap: wrap !important;
         }
         .stTabs [data-baseweb="tab"] {
             height: 36px;
-            padding: 0 20px !important;
+            padding: 0 16px !important;
             font-weight: 700 !important;
-            font-size: 0.85rem !important;
+            font-size: 0.82rem !important;
             border-radius: 30px !important;
-            color: #475569 !important;
-            background-color: #f1f5f9 !important;
-            border: 1px solid #cbd5e1 !important;
+            color: var(--text-sub) !important;
+            background-color: var(--badge-bg) !important;
+            border: 1px solid var(--border-card) !important;
         }
         .stTabs [aria-selected="true"] {
-            background-color: #1e3a8a !important;
+            background-color: #2563eb !important;
             color: #ffffff !important;
-            border-color: #1e3a8a !important;
-            box-shadow: 0 4px 10px rgba(30, 58, 138, 0.25);
+            border-color: #2563eb !important;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
         }
 
-        /* Universal Table Headers & Cells Center Alignment */
+        /* Universal Tables Center Alignment */
         div[data-testid="stDataFrame"] table {
             width: 100% !important;
         }
         div[data-testid="stDataFrame"] th, div[data-testid="stDataFrame"] th * {
             text-align: center !important;
             justify-content: center !important;
-            background-color: #f8fafc !important;
-            color: #0f172a !important;
+            background-color: var(--table-header-bg) !important;
+            color: var(--text-main) !important;
             font-weight: 800 !important;
             font-size: 0.82rem !important;
             white-space: normal !important;
@@ -206,8 +232,26 @@ st.markdown("""
             text-align: center !important;
             justify-content: center !important;
             font-size: 0.82rem !important;
+            color: var(--text-main) !important;
             padding: 6px 4px !important;
             white-space: normal !important;
+        }
+
+        /* Mobile Responsive Adjustments */
+        @media (max-width: 768px) {
+            .main-title {
+                font-size: 1.15rem !important;
+            }
+            .station-subtitle {
+                font-size: 0.85rem !important;
+            }
+            .metric-card {
+                min-height: 120px !important;
+                margin-bottom: 8px !important;
+            }
+            .metric-value {
+                font-size: 1.1rem !important;
+            }
         }
     </style>
 """, unsafe_allow_html=True)
@@ -258,7 +302,7 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 
 if not st.session_state.authenticated:
-    st.markdown("<h2 style='text-align: center; color: #0f172a; margin-top: 10px; font-weight:800;'>🚄 Railway Earning Dashboard Access</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: var(--text-main); margin-top: 10px; font-weight:800;'>🚄 Railway Earning Dashboard Access</h2>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 1.2, 1])
     with col2:
@@ -476,7 +520,7 @@ comb_pass_curr = b_pass_curr + p_pass_curr
 comb_ear_curr = b_ear_curr + p_ear_curr
 comb_ear_prev = b_ear_prev + p_ear_prev
 
-# ----------------- UNCLIPPED HEADER SECTION -----------------
+# ----------------- UNCLIPPED RESPONSIVE HEADER -----------------
 st.markdown(f"""
     <div class="main-header-container">
         <div>
@@ -491,8 +535,8 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# ----------------- HIGH CONTRAST TOP METRICS -----------------
-c1, c2, c3, c4, c5 = st.columns(5)
+# ----------------- HIGH CONTRAST RESPONSIVE METRIC CARDS -----------------
+c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1])
 
 def render_centered_metric(col, title, curr, prev, days, is_combined=False, pass_val=0):
     per_day = curr / days if days > 0 else 0
@@ -502,7 +546,7 @@ def render_centered_metric(col, title, curr, prev, days, is_combined=False, pass
     if is_combined:
         pass_per_day = pass_val / days if days > 0 else 0
         content = f"""
-            <div class="metric-card" style="border-top: 4px solid #1e3a8a;">
+            <div class="metric-card" style="border-top: 4px solid #2563eb;">
                 <div class="metric-title">👥 COMBINED PASSENGER</div>
                 <div class="metric-value">₹ {format_inr(curr)}</div>
                 <div class="metric-sub">Pass: {format_plain_number(pass_val)} | P/Day: {format_plain_number(pass_per_day)}</div>
@@ -584,7 +628,7 @@ def render_table_with_totals(df, title):
     
     df_totals = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
     
-    # Capitalize / Clean Header Names
+    # Capitalize Headers
     df_totals.columns = [str(c).replace('_', ' ').title() for c in df_totals.columns]
 
     column_config = {}
@@ -599,7 +643,6 @@ def render_table_with_totals(df, title):
             if col in num_cols:
                 df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notnull(x) else x)
         
-        # EVERY COLUMN CENTER ALIGNED
         column_config[col] = st.column_config.TextColumn(col, alignment="center")
 
     st.dataframe(
