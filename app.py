@@ -1,27 +1,177 @@
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine, text
+import sqlite3
+import bcrypt
 
 # ----------------- PAGE CONFIGURATION -----------------
 st.set_page_config(
-    page_title="Railway Earning Dashboard", 
+    page_title="Railway Earning & Traffic Executive Dashboard", 
+    page_icon="🚄",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ----------------- CUSTOM CSS -----------------
+# ----------------- LOCAL USER AUTH DATABASE (SQLITE) -----------------
+def init_auth_db():
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            password TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_auth_db()
+
+def create_user(username, password):
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    try:
+        c.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, hashed))
+        conn.commit()
+        conn.close()
+        return True
+    except sqlite3.IntegrityError:
+        conn.close()
+        return False
+
+def verify_user(username, password):
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute('SELECT password FROM users WHERE username = ?', (username,))
+    row = c.fetchone()
+    conn.close()
+    if row:
+        return bcrypt.checkpw(password.encode('utf-8'), row[0].encode('utf-8'))
+    return False
+
+# ----------------- CUSTOM PROFESSIONAL CSS -----------------
 st.markdown("""
     <style>
-        .block-container { padding-top: 1rem !important; padding-bottom: 0rem !important; }
-        div[data-testid="stMetricValue"] { font-size: 1.25rem !important; }
-        .combined-card {
-            background-color: #f0f2f6;
-            border-radius: 8px;
-            padding: 10px 14px;
-            border-left: 5px solid #ff4b4b;
+        /* Main Layout & Density Optimizations for Zero Scroll */
+        .block-container { 
+            padding-top: 1rem !important; 
+            padding-bottom: 0.5rem !important;
+            max-width: 98% !important;
         }
-        .stTabs [data-baseweb="tab-list"] { gap: 6px; }
-        .stTabs [data-baseweb="tab"] { padding-top: 4px; padding-bottom: 4px; }
+        
+        /* Typography */
+        html, body, [class*="css"] {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        /* Metric Card Container Styling */
+        .metric-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 8px;
+            text-align: center !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            transition: all 0.2s ease-in-out;
+            height: 100%;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+            border-color: #cbd5e1;
+        }
+        
+        .metric-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #334155;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 2px 0;
+            text-align: center;
+        }
+        .metric-sub {
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: 500;
+            text-align: center;
+        }
+        .metric-delta-pos {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #16a34a;
+            background-color: #dcfce7;
+            padding: 2px 6px;
+            border-radius: 12px;
+            display: inline-block;
+            margin-top: 4px;
+        }
+        .metric-delta-neg {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #dc2626;
+            background-color: #fee2e2;
+            padding: 2px 6px;
+            border-radius: 12px;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        /* Tabs Styling */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 38px;
+            padding: 0 16px;
+            font-weight: 600;
+            border-radius: 6px 6px 0 0;
+            color: #64748b;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #1e293b !important;
+            color: #ffffff !important;
+        }
+
+        /* Center Align Table Content & Headers */
+        div[data-testid="stDataFrame"] table {
+            text-align: center !important;
+            width: 100% !important;
+        }
+        div[data-testid="stDataFrame"] th {
+            text-align: center !important;
+            background-color: #f1f5f9 !important;
+            color: #1e293b !important;
+            font-weight: 700 !important;
+            font-size: 0.8rem !important;
+            padding: 6px !important;
+        }
+        div[data-testid="stDataFrame"] td {
+            text-align: center !important;
+            font-size: 0.8rem !important;
+            padding: 4px 6px !important;
+        }
+        
+        /* Compact Header Banner */
+        .header-banner {
+            background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            padding: 10px 18px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -46,39 +196,64 @@ def format_inr(number):
         return str(number)
 
 def format_session(raw_s):
-    """Converts 200001 -> 2000-01"""
     s = str(raw_s).split('.')[0].strip()
     if len(s) == 6:
         return f"{s[:4]}-{s[4:]}"
     return s
 
 def parse_session(fmt_s):
-    """Converts 2000-01 -> 200001"""
     return str(fmt_s).replace('-', '').strip()
 
-# ----------------- SECURE CREDENTIALS FROM SECRETS -----------------
-APP_USER = st.secrets.get("APP_USER", "StationEarning").strip()
-APP_PASSWORD = st.secrets.get("APP_PASSWORD", "pamcell2234723").strip()
+# ----------------- SECURE DATABASE CREDENTIALS -----------------
 SUPABASE_URL = st.secrets.get("SUPABASE_URL", "postgresql://postgres.ggrpypensvabbvpyzqbx:2234723pamcell@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres").strip()
 
-# ----------------- SIMPLE LOGIN AUTHENTICATION -----------------
+# ----------------- AUTHENTICATION PAGE (LOGIN / SIGNUP) -----------------
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
 
 if not st.session_state.authenticated:
-    st.title("🔒 Station Earning Dashboard Login")
-    with st.form("login_form"):
-        user_input = st.text_input("Username").strip()
-        pass_input = st.text_input("Password", type="password").strip()
-        submit_button = st.form_submit_button("Login")
+    st.markdown("<h2 style='text-align: center; color: #0f172a;'>🚄 Railway Earning Dashboard Access</h2>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 1.2, 1])
+    with col2:
+        auth_mode = st.radio("Choose Option", ["Login", "Sign Up / Create Account"], horizontal=True, label_visibility="collapsed")
+        
+        if auth_mode == "Login":
+            st.subheader("🔑 User Login")
+            with st.form("login_form"):
+                user_input = st.text_input("Username").strip()
+                pass_input = st.text_input("Password", type="password").strip()
+                submit_login = st.form_submit_button("Login to Dashboard", use_container_width=True)
 
-        if submit_button:
-            if user_input == APP_USER and pass_input == APP_PASSWORD:
-                st.session_state.authenticated = True
-                st.success("Login Successful!")
-                st.rerun()
-            else:
-                st.error("Invalid Username or Password")
+                if submit_login:
+                    if verify_user(user_input, pass_input):
+                        st.session_state.authenticated = True
+                        st.session_state.username = user_input
+                        st.success("Login Successful!")
+                        st.rerun()
+                    else:
+                        st.error("Invalid Username or Password")
+
+        else:
+            st.subheader("📝 Create New Account")
+            with st.form("signup_form"):
+                new_user = st.text_input("Choose Username").strip()
+                new_pass = st.text_input("Choose Password", type="password").strip()
+                confirm_pass = st.text_input("Confirm Password", type="password").strip()
+                submit_signup = st.form_submit_button("Register Account", use_container_width=True)
+
+                if submit_signup:
+                    if not new_user or not new_pass:
+                        st.warning("Username and Password cannot be empty.")
+                    elif new_pass != confirm_pass:
+                        st.error("Passwords do not match!")
+                    else:
+                        if create_user(new_user, new_pass):
+                            st.success("Account created successfully! Please switch to Login.")
+                        else:
+                            st.error("Username already exists. Choose a different one.")
     st.stop()
 
 # ----------------- DATABASE CONNECTION -----------------
@@ -131,13 +306,15 @@ QUARTERS = {
     'Q4 (Jan-Mar)': ['Jan', 'Feb', 'Mar']
 }
 
-st.title("🚄 Station Earning & Traffic Executive Dashboard")
-
 # ----------------- SIDEBAR FILTERS -----------------
-st.sidebar.header("🔍 Filter Options")
-if st.sidebar.button("Logout"):
+st.sidebar.markdown(f"👤 **User:** `{st.session_state.username}`")
+if st.sidebar.button("🔒 Logout", use_container_width=True):
     st.session_state.authenticated = False
+    st.session_state.username = ""
     st.rerun()
+
+st.sidebar.markdown("---")
+st.sidebar.header("🔍 Dashboard Filters")
 
 # Fetch Stations
 try:
@@ -160,7 +337,7 @@ except Exception as e:
     st.error(f"Error loading sessions: {e}")
     st.stop()
 
-# Calculate Previous Financial Year Session
+# Previous Session Logic
 start_yr = int(selected_raw_session[:4])
 end_yr = int(selected_raw_session[4:])
 prev_raw_session = f"{start_yr - 1:04d}{end_yr - 1:02d}"
@@ -230,9 +407,8 @@ def fetch_total(table_name, filters_list, col_name):
                 val = pd.read_sql(text(q), conn)['val'].iloc[0]
                 if pd.notnull(val): 
                     total += float(val)
-            except Exception as e:
+            except Exception:
                 conn.rollback()
-                st.sidebar.warning(f"Error reading {table_name}: {e}")
     return total
 
 pass_col_booking = get_pass_col('booking')
@@ -255,45 +431,63 @@ g_ear_prev = fetch_total('goods', query_filters_prev, goods_freight_col)
 pr_ear_curr = fetch_total('parcel', query_filters_curr, parcel_freight_col)
 pr_ear_prev = fetch_total('parcel', query_filters_prev, parcel_freight_col)
 
-# Combined Passenger Calculation
+# Combined Calculations
 comb_pass_curr = b_pass_curr + p_pass_curr
 comb_ear_curr = b_ear_curr + p_ear_curr
 comb_ear_prev = b_ear_prev + p_ear_prev
 
-# ----------------- DISPLAY METRICS -----------------
-st.markdown(f"### 📍 Station: **{selected_station}** | Period: **{display_period_text}**")
-st.caption(f"🗓️ Current Period vs Previous Year Period ({total_days} Days Selected)")
-
-c1, c2, c3, c4, c5 = st.columns([1.2, 1, 1, 1, 1])
-
-with c1:
-    comb_growth = ((comb_ear_curr - comb_ear_prev) / comb_ear_prev * 100) if comb_ear_prev > 0 else 0
-    pass_per_day = comb_pass_curr / total_days if total_days > 0 else 0
-    ear_per_day = comb_ear_curr / total_days if total_days > 0 else 0
-    
-    st.markdown(f"""
-        <div class="combined-card">
-            <div style="font-size: 0.85rem; font-weight: bold; color: #333;">👥 Combined Passenger (PRS+Booking)</div>
-            <div style="font-size: 0.8rem; margin-top:2px;"><b>Pass:</b> {format_inr(comb_pass_curr)} | <b>Earning:</b> ₹ {format_inr(comb_ear_curr)}</div>
-            <div style="font-size: 0.75rem; color: #555; margin-top:2px;"><b>Pass/Day:</b> {format_inr(pass_per_day)} | <b>Ear/Day:</b> ₹ {format_inr(ear_per_day)}</div>
-            <div style="font-size: 0.75rem; color: {'green' if comb_growth>=0 else 'red'}; font-weight:bold;">{comb_growth:+.1f}% vs Prev. Year</div>
+# ----------------- DASHBOARD HEADER BANNER -----------------
+st.markdown(f"""
+    <div class="header-banner">
+        <div>
+            <h3 style="margin:0; font-weight:800; font-size:1.2rem;">🚄 STATION EARNING & TRAFFIC EXECUTIVE DASHBOARD</h3>
+            <span style="font-size:0.8rem; opacity:0.85;">Station: <b>{selected_station}</b> | Session: <b>{selected_fmt_session}</b> | {display_period_text}</span>
         </div>
-    """, unsafe_allow_html=True)
+        <div style="text-align:right; font-size:0.8rem; opacity:0.9;">
+            🗓️ <b>{total_days} Days Selected</b>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
-def metric_box(col, title, curr, prev, days):
+# ----------------- CENTERED TOP METRIC CARDS -----------------
+c1, c2, c3, c4, c5 = st.columns(5)
+
+def render_centered_metric(col, title, curr, prev, days, is_combined=False, pass_val=0):
     per_day = curr / days if days > 0 else 0
     growth = ((curr - prev) / prev * 100) if prev > 0 else 0
-    col.metric(label=title, value=f"₹ {format_inr(curr)}", delta=f"{growth:+.1f}% vs Prev. Year")
-    col.caption(f"⏱️ **Ear/Day:** ₹ {format_inr(per_day)}")
+    delta_class = "metric-delta-pos" if growth >= 0 else "metric-delta-neg"
+    
+    if is_combined:
+        pass_per_day = pass_val / days if days > 0 else 0
+        content = f"""
+            <div class="metric-card" style="border-left: 4px solid #3b82f6;">
+                <div class="metric-title">👥 COMBINED PASSENGER</div>
+                <div class="metric-value">₹ {format_inr(curr)}</div>
+                <div class="metric-sub"><b>Pass:</b> {format_inr(pass_val)} | <b>P/Day:</b> {format_inr(pass_per_day)}</div>
+                <div class="metric-sub"><b>Ear/Day:</b> ₹ {format_inr(per_day)}</div>
+                <div class="{delta_class}">{growth:+.1f}% vs Prev. Year</div>
+            </div>
+        """
+    else:
+        content = f"""
+            <div class="metric-card">
+                <div class="metric-title">{title}</div>
+                <div class="metric-value">₹ {format_inr(curr)}</div>
+                <div class="metric-sub"><b>Ear/Day:</b> ₹ {format_inr(per_day)}</div>
+                <div class="{delta_class}">{growth:+.1f}% vs Prev. Year</div>
+            </div>
+        """
+    col.markdown(content, unsafe_allow_html=True)
 
-metric_box(c2, "Booking (Ear)", b_ear_curr, b_ear_prev, total_days)
-metric_box(c3, "PRS_ORG (Ear)", p_ear_curr, p_ear_prev, total_days)
-metric_box(c4, "Goods Freight", g_ear_curr, g_ear_prev, total_days)
-metric_box(c5, "Parcel Freight", pr_ear_curr, pr_ear_prev, total_days)
+render_centered_metric(c1, "Combined", comb_ear_curr, comb_ear_prev, total_days, is_combined=True, pass_val=comb_pass_curr)
+render_centered_metric(c2, "BOOKING EARNING", b_ear_curr, b_ear_prev, total_days)
+render_centered_metric(c3, "PRS ORG EARNING", p_ear_curr, p_ear_prev, total_days)
+render_centered_metric(c4, "GOODS FREIGHT", g_ear_curr, g_ear_prev, total_days)
+render_centered_metric(c5, "PARCEL FREIGHT", pr_ear_curr, pr_ear_prev, total_days)
 
-st.markdown("---")
+st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-# ----------------- DETAILED TABLES -----------------
+# ----------------- COMPACT DETAILED TABLES -----------------
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Booking", "PRS Org", "Combined Passenger", "Goods", "Parcel", "Reservation"
 ])
@@ -318,9 +512,8 @@ def fetch_table_filtered(table_name):
                 if not df.empty:
                     df['FMT_SESSION'] = format_session(sess)
                     frames.append(df)
-            except Exception as e:
+            except Exception:
                 conn.rollback()
-                st.sidebar.warning(f"Table Fetch Error ({table_name}): {e}")
             
     if not frames: 
         return pd.DataFrame()
@@ -337,7 +530,7 @@ def fetch_table_filtered(table_name):
 
 def render_table_with_totals(df, title):
     if df.empty:
-        st.info(f"No records for {title} in selected period.")
+        st.info(f"No records available for {title} in selected period.")
         return
         
     num_cols = df.select_dtypes(include=['number']).columns
@@ -351,7 +544,13 @@ def render_table_with_totals(df, title):
     for c in num_cols:
         df_totals[c] = df_totals[c].apply(lambda x: format_inr(x) if pd.notnull(x) else x)
 
-    st.dataframe(df_totals, use_container_width=True, hide_index=True)
+    # Render table optimized for no vertical/horizontal scrolling
+    st.dataframe(
+        df_totals, 
+        use_container_width=True, 
+        hide_index=True,
+        height=min(420, (len(df_totals) + 1) * 35) # Dynamic height fitting screen perfectly
+    )
 
 with tab1:
     render_table_with_totals(fetch_table_filtered('booking'), "Booking")
