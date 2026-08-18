@@ -88,7 +88,7 @@ def get_database_connection():
 
 engine = get_database_connection()
 
-# ----------------- DYNAMIC COLUMN FINDER -----------------
+# ----------------- DYNAMIC COLUMN FINDERS -----------------
 def get_station_col(conn, table_name='booking'):
     try:
         cols = pd.read_sql(text(f'SELECT * FROM {table_name} LIMIT 1'), conn).columns
@@ -98,6 +98,28 @@ def get_station_col(conn, table_name='booking'):
     except Exception: 
         pass
     return 'STATION_COD'
+
+def get_pass_col(table_name):
+    try:
+        with engine.connect() as conn:
+            cols = pd.read_sql(text(f'SELECT * FROM {table_name} LIMIT 1'), conn).columns
+            cols = [c.upper() for c in cols]
+            if 'PASSENGERS' in cols: return 'PASSENGERS'
+            if 'PASSENGER' in cols: return 'PASSENGER'
+    except Exception: 
+        pass
+    return 'PASSENGER'
+
+def get_freight_col(table_name):
+    try:
+        with engine.connect() as conn:
+            cols = pd.read_sql(text(f'SELECT * FROM {table_name} LIMIT 1'), conn).columns
+            cols = [c.upper() for c in cols]
+            if 'OW_FRIEGHT' in cols: return 'OW_FRIEGHT'
+            if 'OW_FREIGHT' in cols: return 'OW_FREIGHT'
+    except Exception:
+        pass
+    return 'OW_FRIEGHT'
 
 # ----------------- CONSTANTS & MAPPINGS -----------------
 MONTH_DAYS = {'Apr': 30, 'May': 31, 'Jun': 30, 'Jul': 31, 'Aug': 31, 'Sep': 30, 'Oct': 31, 'Nov': 30, 'Dec': 31, 'Jan': 31, 'Feb': 28, 'Mar': 31}
@@ -138,7 +160,7 @@ except Exception as e:
     st.error(f"Error loading sessions: {e}")
     st.stop()
 
-# Calculate Previous Financial Year Session (e.g. 200102 -> 200001)
+# Calculate Previous Financial Year Session
 start_yr = int(selected_raw_session[:4])
 end_yr = int(selected_raw_session[4:])
 prev_raw_session = f"{start_yr - 1:04d}{end_yr - 1:02d}"
@@ -188,15 +210,16 @@ else: # Rolling Filters
 
 total_days = sum([sum([MONTH_DAYS.get(m, 30) for m in m_list]) for _, m_list in query_filters_curr])
 
-# ----------------- DATA FETCHING WITH CASE & SPACE HANDLING -----------------
+# ----------------- DATA FETCHING -----------------
 def fetch_total(table_name, filters_list, col_name):
     total = 0.0
-    with engine.connect() as conn:
-        stn_c = get_station_col(conn, table_name)
-        for sess, m_list in filters_list:
-            if not m_list: 
-                continue
-            m_str = "','".join([m.upper() for m in m_list])
+    for sess, m_list in filters_list:
+        if not m_list: 
+            continue
+        m_str = "','".join([m.upper() for m in m_list])
+        
+        with engine.connect() as conn:
+            stn_c = get_station_col(conn, table_name)
             q = f'''
                 SELECT SUM("{col_name}") as val FROM {table_name}
                 WHERE UPPER(TRIM(CAST("{stn_c}" AS TEXT))) = UPPER('{selected_station.strip()}') 
@@ -208,22 +231,14 @@ def fetch_total(table_name, filters_list, col_name):
                 if pd.notnull(val): 
                     total += float(val)
             except Exception as e:
+                conn.rollback()
                 st.sidebar.warning(f"Error reading {table_name}: {e}")
     return total
 
-def get_pass_col(table_name):
-    try:
-        with engine.connect() as conn:
-            cols = pd.read_sql(text(f'SELECT * FROM {table_name} LIMIT 1'), conn).columns
-            cols = [c.upper() for c in cols]
-            if 'PASSENGERS' in cols: return 'PASSENGERS'
-            if 'PASSENGER' in cols: return 'PASSENGER'
-    except Exception: 
-        pass
-    return 'PASSENGER'
-
 pass_col_booking = get_pass_col('booking')
 pass_col_prs = get_pass_col('reservation_org')
+goods_freight_col = get_freight_col('goods')
+parcel_freight_col = get_freight_col('parcel')
 
 # Fetch Earnings & Passengers
 b_ear_curr = fetch_total('booking', query_filters_curr, 'EARNING')
@@ -234,11 +249,11 @@ p_ear_curr = fetch_total('reservation_org', query_filters_curr, 'EARNINGS')
 p_ear_prev = fetch_total('reservation_org', query_filters_prev, 'EARNINGS')
 p_pass_curr = fetch_total('reservation_org', query_filters_curr, pass_col_prs)
 
-g_ear_curr = fetch_total('goods', query_filters_curr, 'OW_FREIGHT' if 'OW_FREIGHT' in ['OW_FREIGHT'] else 'OW_FRIEGHT')
-g_ear_prev = fetch_total('goods', query_filters_prev, 'OW_FREIGHT' if 'OW_FREIGHT' in ['OW_FREIGHT'] else 'OW_FRIEGHT')
+g_ear_curr = fetch_total('goods', query_filters_curr, goods_freight_col)
+g_ear_prev = fetch_total('goods', query_filters_prev, goods_freight_col)
 
-pr_ear_curr = fetch_total('parcel', query_filters_curr, 'OW_FREIGHT' if 'OW_FREIGHT' in ['OW_FREIGHT'] else 'OW_FRIEGHT')
-pr_ear_prev = fetch_total('parcel', query_filters_prev, 'OW_FREIGHT' if 'OW_FREIGHT' in ['OW_FREIGHT'] else 'OW_FRIEGHT')
+pr_ear_curr = fetch_total('parcel', query_filters_curr, parcel_freight_col)
+pr_ear_prev = fetch_total('parcel', query_filters_prev, parcel_freight_col)
 
 # Combined Passenger Calculation
 comb_pass_curr = b_pass_curr + p_pass_curr
@@ -285,12 +300,13 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 
 def fetch_table_filtered(table_name):
     frames = []
-    with engine.connect() as conn:
-        stn_c = get_station_col(conn, table_name)
-        for sess, m_list in query_filters_curr:
-            if not m_list: 
-                continue
-            m_str = "','".join([m.upper() for m in m_list])
+    for sess, m_list in query_filters_curr:
+        if not m_list: 
+            continue
+        m_str = "','".join([m.upper() for m in m_list])
+        
+        with engine.connect() as conn:
+            stn_c = get_station_col(conn, table_name)
             q = f'''
                 SELECT * FROM {table_name} 
                 WHERE UPPER(TRIM(CAST("{stn_c}" AS TEXT))) = UPPER('{selected_station.strip()}') 
@@ -303,6 +319,7 @@ def fetch_table_filtered(table_name):
                     df['FMT_SESSION'] = format_session(sess)
                     frames.append(df)
             except Exception as e:
+                conn.rollback()
                 st.sidebar.warning(f"Table Fetch Error ({table_name}): {e}")
             
     if not frames: 
