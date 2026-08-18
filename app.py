@@ -52,14 +52,15 @@ def verify_user(username, password):
         return bcrypt.checkpw(password.encode('utf-8'), row[0].encode('utf-8'))
     return False
 
-# ----------------- ADVANCED PROFESSIONAL CSS -----------------
+# ----------------- ADVANCED PROFESSIONAL CSS OVERRIDES -----------------
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         
+        /* Prevent Any Header Clipping */
         .block-container { 
-            padding-top: 1rem !important; 
-            padding-bottom: 0.5rem !important;
+            padding-top: 3.5rem !important; 
+            padding-bottom: 1rem !important;
             padding-left: 1.5rem !important;
             padding-right: 1.5rem !important;
             max-width: 100% !important;
@@ -70,25 +71,26 @@ st.markdown("""
             -webkit-font-smoothing: antialiased;
         }
         
-        /* Clean Large Header Section */
+        /* Header Title Styling */
         .main-header-container {
-            padding: 8px 0px 16px 0px;
-            border-bottom: 2px solid #e2e8f0;
+            padding: 4px 0px 14px 0px;
+            border-bottom: 2px solid #cbd5e1;
             margin-bottom: 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            overflow: visible !important;
         }
         .main-title {
-            font-size: 1.6rem !important;
+            font-size: 1.5rem !important;
             font-weight: 900 !important;
             color: #0f172a !important;
-            letter-spacing: -0.5px;
+            letter-spacing: -0.3px;
             margin: 0 !important;
-            line-height: 1.2 !important;
+            line-height: 1.3 !important;
         }
         .station-subtitle {
-            font-size: 1.05rem !important;
+            font-size: 1rem !important;
             color: #334155 !important;
             font-weight: 600 !important;
             margin-top: 4px !important;
@@ -96,29 +98,29 @@ st.markdown("""
         .highlight-badge {
             background-color: #1e3a8a;
             color: #ffffff;
-            padding: 2px 8px;
+            padding: 3px 10px;
             border-radius: 6px;
-            font-weight: 700;
+            font-weight: 800;
         }
         .days-badge {
-            font-size: 0.88rem;
-            font-weight: 700;
+            font-size: 0.85rem;
+            font-weight: 800;
             background-color: #f1f5f9;
-            color: #1e293b;
+            color: #0f172a;
             padding: 8px 16px;
             border-radius: 8px;
-            border: 1px solid #cbd5e1;
+            border: 1px solid #94a3b8;
         }
         
-        /* Sharp High-Contrast Metric Cards */
+        /* Sharp Metric Cards with High Contrast % Comparison */
         .metric-card {
             background: #ffffff;
             border: 1px solid #cbd5e1;
             border-radius: 12px;
             padding: 12px 6px;
             text-align: center !important;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-            min-height: 142px !important;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.06);
+            min-height: 145px !important;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -127,7 +129,7 @@ st.markdown("""
         .metric-title {
             font-size: 0.76rem;
             font-weight: 800;
-            color: #334155;
+            color: #1e293b;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -140,30 +142,30 @@ st.markdown("""
         }
         .metric-sub {
             font-size: 0.74rem;
-            color: #475569;
+            color: #334155;
             font-weight: 600;
             margin-bottom: 2px;
         }
         .metric-delta-pos {
-            font-size: 0.75rem;
-            font-weight: 800;
-            color: #15803d;
-            background-color: #dcfce7;
-            padding: 3px 10px;
-            border-radius: 20px;
-            border: 1px solid #bbf7d0;
+            font-size: 0.78rem !important;
+            font-weight: 900 !important;
+            color: #065f46 !important;
+            background-color: #a7f3d0 !important;
+            padding: 3px 12px !important;
+            border-radius: 20px !important;
+            border: 1px solid #059669 !important;
         }
         .metric-delta-neg {
-            font-size: 0.75rem;
-            font-weight: 800;
-            color: #dc2626;
-            background-color: #fee2e2;
-            padding: 3px 10px;
-            border-radius: 20px;
-            border: 1px solid #fecaca;
+            font-size: 0.78rem !important;
+            font-weight: 900 !important;
+            color: #7f1d1d !important;
+            background-color: #fecaca !important;
+            padding: 3px 12px !important;
+            border-radius: 20px !important;
+            border: 1px solid #dc2626 !important;
         }
 
-        /* Modern Pill Shaped Tabs */
+        /* Pill Tabs */
         .stTabs [data-baseweb="tab-list"] {
             gap: 10px !important;
             border-bottom: none !important;
@@ -186,22 +188,23 @@ st.markdown("""
             box-shadow: 0 4px 10px rgba(30, 58, 138, 0.25);
         }
 
-        /* Center Align Table Headers and Cells */
+        /* Universal Table Headers & Cells Center Alignment */
         div[data-testid="stDataFrame"] table {
             width: 100% !important;
         }
-        div[data-testid="stDataFrame"] th {
+        div[data-testid="stDataFrame"] th, div[data-testid="stDataFrame"] th * {
             text-align: center !important;
+            justify-content: center !important;
             background-color: #f8fafc !important;
             color: #0f172a !important;
             font-weight: 800 !important;
             font-size: 0.82rem !important;
             white-space: normal !important;
-            word-wrap: break-word !important;
             padding: 8px 4px !important;
-            border-bottom: 2px solid #e2e8f0 !important;
         }
-        div[data-testid="stDataFrame"] td {
+        div[data-testid="stDataFrame"] td, div[data-testid="stDataFrame"] td * {
+            text-align: center !important;
+            justify-content: center !important;
             font-size: 0.82rem !important;
             padding: 6px 4px !important;
             white-space: normal !important;
@@ -473,7 +476,7 @@ comb_pass_curr = b_pass_curr + p_pass_curr
 comb_ear_curr = b_ear_curr + p_ear_curr
 comb_ear_prev = b_ear_prev + p_ear_prev
 
-# ----------------- CLEAN OPEN HEADER SECTION -----------------
+# ----------------- UNCLIPPED HEADER SECTION -----------------
 st.markdown(f"""
     <div class="main-header-container">
         <div>
@@ -488,7 +491,7 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# ----------------- TOP METRIC CARDS WITH CLEAR COMPARISON -----------------
+# ----------------- HIGH CONTRAST TOP METRICS -----------------
 c1, c2, c3, c4, c5 = st.columns(5)
 
 def render_centered_metric(col, title, curr, prev, days, is_combined=False, pass_val=0):
@@ -527,7 +530,7 @@ render_centered_metric(c5, "PARCEL FREIGHT", pr_ear_curr, pr_ear_prev, total_day
 
 st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
-# ----------------- TABS & FULL 12 MONTHS TABLES -----------------
+# ----------------- TABS & TABLES -----------------
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Booking", "PRS Org", "Combined Passenger", "Goods", "Parcel", "Reservation"
 ])
@@ -581,8 +584,8 @@ def render_table_with_totals(df, title):
     
     df_totals = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
     
-    # Header format
-    df_totals.columns = [str(c).replace('_', ' ') for c in df_totals.columns]
+    # Capitalize / Clean Header Names
+    df_totals.columns = [str(c).replace('_', ' ').title() for c in df_totals.columns]
 
     column_config = {}
     for col in df_totals.columns:
@@ -590,24 +593,21 @@ def render_table_with_totals(df, title):
         
         if 'PASSENGER' in col_upper:
             df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notnull(x) else x)
-            column_config[col] = st.column_config.TextColumn(col, alignment="center")
-            
         elif any(kw in col_upper for kw in ['EARNING', 'FREIGHT', 'AMOUNT', 'CASH']):
             df_totals[col] = df_totals[col].apply(lambda x: format_inr(x) if pd.notnull(x) else x)
-            column_config[col] = st.column_config.TextColumn(col, alignment="right")
-            
         else:
             if col in num_cols:
                 df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notnull(x) else x)
-            column_config[col] = st.column_config.TextColumn(col, alignment="center")
+        
+        # EVERY COLUMN CENTER ALIGNED
+        column_config[col] = st.column_config.TextColumn(col, alignment="center")
 
-    # Dynamic Height set to 520px so 12 months + TOTAL fit without scroll
     st.dataframe(
         df_totals, 
         use_container_width=True, 
         hide_index=True,
         column_config=column_config,
-        height=min(520, (len(df_totals) + 1) * 36)
+        height=min(530, (len(df_totals) + 1) * 36)
     )
 
 with tab1:
