@@ -287,9 +287,9 @@ def parse_session(fmt_s):
 
 def get_station_col(conn, table_name='booking'):
     try:
-        cols = pd.read_sql(text(f'SELECT * FROM {table_name} LIMIT 1'), conn).columns
+        cols = pd.read_sql(text(f'SELECT * FROM "{table_name}" LIMIT 1'), conn).columns
         for c in cols:
-            if c.upper().replace('_', '').replace(' ', '').strip() in ['STATIONCODE', 'STATIONCOD', 'STNCODE']:
+            if c.upper().replace('_', '').replace(' ', '').strip() in ['STATIONCODE', 'STATIONCOD', 'STNCODE', 'STATION']:
                 return c
     except Exception: pass
     return 'STATION_CODE'
@@ -297,7 +297,7 @@ def get_station_col(conn, table_name='booking'):
 def get_pass_col(table_name):
     try:
         with engine.connect() as conn:
-            cols = [c.upper() for c in pd.read_sql(text(f'SELECT * FROM {table_name} LIMIT 1'), conn).columns]
+            cols = [c.upper() for c in pd.read_sql(text(f'SELECT * FROM "{table_name}" LIMIT 1'), conn).columns]
             if 'PASSENGERS' in cols: return 'PASSENGERS'
             if 'PASSENGER' in cols: return 'PASSENGER'
     except Exception: pass
@@ -306,7 +306,7 @@ def get_pass_col(table_name):
 def get_freight_col(table_name):
     try:
         with engine.connect() as conn:
-            cols = [c.upper() for c in pd.read_sql(text(f'SELECT * FROM {table_name} LIMIT 1'), conn).columns]
+            cols = [c.upper() for c in pd.read_sql(text(f'SELECT * FROM "{table_name}" LIMIT 1'), conn).columns]
             if 'OW_FRIEGHT' in cols: return 'OW_FRIEGHT'
             if 'OW_FREIGHT' in cols: return 'OW_FREIGHT'
     except Exception: pass
@@ -443,38 +443,40 @@ else:
 
 total_days = sum([sum([MONTH_DAYS.get(m, 30) for m in m_list]) for _, m_list in query_filters_curr])
 
-# --- ULTRA-ROBUST STATION DETAILS FETCH ---
+# --- FIXED STATION DETAILS FETCH FOR SUPABASE DB ---
 stn_name, cat, cmi_sec, cmi_name = "", "", "", ""
 try:
     with engine.connect() as conn:
-        # Table name resolution (handles station_list, stationlist, Station List)
         tables_res = conn.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'")).fetchall()
         avail_tables = [t[0] for t in tables_res]
         
         target_tbl = None
         for t in avail_tables:
-            if t.lower().replace('_', '').replace(' ', '') in ['stationlist', 'station']:
+            clean_t = t.lower().replace('_', '').replace(' ', '').replace('-', '')
+            if 'station' in clean_t:
                 target_tbl = t
                 break
         
         if target_tbl:
             df_stn = pd.read_sql(text(f'SELECT * FROM "{target_tbl}"'), conn)
-            df_stn.columns = [str(c).upper().replace('_', '').replace(' ', '').strip() for c in df_stn.columns]
+            clean_cols = {str(c).upper().replace('_', '').replace(' ', '').strip(): c for c in df_stn.columns}
             
             code_col = None
-            for c in df_stn.columns:
-                if c in ['STATIONCODE', 'STATIONCOD', 'STNCODE', 'STATION']:
-                    code_col = c
+            for key in ['STATIONCODE', 'STATIONCOD', 'STNCODE', 'STATION', 'CODE']:
+                if key in clean_cols:
+                    code_col = clean_cols[key]
                     break
             
             if code_col:
                 matched = df_stn[df_stn[code_col].astype(str).str.strip().str.upper() == selected_station.strip().upper()]
                 if not matched.empty:
                     r = matched.iloc[0]
-                    stn_name = r.get('STATIONNAME', r.get('STNAME', ''))
-                    cat = r.get('CATEGORY', r.get('CAT', ''))
-                    cmi_sec = r.get('CMISECTION', r.get('CMISEC', ''))
-                    cmi_name = r.get('CMINAME', r.get('CMI', ''))
+                    r_dict = {str(k).upper().replace('_', '').replace(' ', '').strip(): v for k, v in r.items()}
+                    
+                    stn_name = r_dict.get('STATIONNAME', r_dict.get('STNAME', r_dict.get('NAME', '')))
+                    cat = r_dict.get('CATEGORY', r_dict.get('CAT', ''))
+                    cmi_sec = r_dict.get('CMISECTION', r_dict.get('CMISEC', r_dict.get('SECTION', '')))
+                    cmi_name = r_dict.get('CMINAME', r_dict.get('CMI', r_dict.get('OFFICER', '')))
 except Exception: pass
 
 # ----------------- DATA FETCHING FOR METRICS -----------------
@@ -486,7 +488,7 @@ def fetch_total(table_name, filters_list, col_name):
         with engine.connect() as conn:
             stn_c = get_station_col(conn, table_name)
             q = f'''
-                SELECT SUM("{col_name}") as val FROM {table_name}
+                SELECT SUM("{col_name}") as val FROM "{table_name}"
                 WHERE UPPER(TRIM(CAST("{stn_c}" AS TEXT))) = UPPER('{selected_station.strip()}') 
                   AND CAST("SESSION" AS TEXT) = '{sess}'
                   AND UPPER(TRIM("MONTH")) IN ('{m_str}')
@@ -586,7 +588,7 @@ def fetch_table_filtered(table_name):
         with engine.connect() as conn:
             stn_c = get_station_col(conn, table_name)
             q = f'''
-                SELECT * FROM {table_name} 
+                SELECT * FROM "{table_name}" 
                 WHERE UPPER(TRIM(CAST("{stn_c}" AS TEXT))) = UPPER('{selected_station.strip()}') 
                   AND CAST("SESSION" AS TEXT) = '{sess}'
                   AND UPPER(TRIM("MONTH")) IN ('{m_str}')
