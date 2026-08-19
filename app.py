@@ -115,8 +115,9 @@ st.markdown("""
             }
         }
 
+        /* Fixed Top Cut-off Padding */
         .block-container { 
-            padding-top: 2rem !important; 
+            padding-top: 3.2rem !important; 
             padding-bottom: 1rem !important;
             padding-left: 1.2rem !important;
             padding-right: 1.2rem !important;
@@ -127,21 +128,12 @@ st.markdown("""
             font-family: 'Inter', sans-serif !important;
         }
 
-        .main-header-container {
-            padding: 4px 0px 12px 0px;
-            border-bottom: 2px solid var(--border-card);
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
         .main-title {
             font-size: 1.35rem !important;
             font-weight: 900 !important;
             color: var(--text-main) !important;
             letter-spacing: -0.3px;
+            line-height: 1.3 !important;
         }
         .station-subtitle {
             font-size: 0.9rem !important;
@@ -150,10 +142,10 @@ st.markdown("""
             margin-top: 3px !important;
         }
         .station-meta-info {
-            font-size: 0.83rem !important;
-            color: #2563eb !important;
+            font-size: 0.85rem !important;
+            color: #1d4ed8 !important;
             font-weight: 700 !important;
-            margin-top: 3px !important;
+            margin-top: 4px !important;
         }
         .highlight-badge {
             background-color: #1e3a8a;
@@ -170,6 +162,7 @@ st.markdown("""
             padding: 6px 14px;
             border-radius: 8px;
             border: 1px solid var(--border-card);
+            display: inline-block;
         }
 
         .metric-card {
@@ -292,7 +285,7 @@ def get_station_col(conn, table_name='booking'):
     try:
         cols = pd.read_sql(text(f'SELECT * FROM {table_name} LIMIT 1'), conn).columns
         for c in cols:
-            if c.upper() in ['STATION_CODE', 'STATION_COD', 'STN_CODE']:
+            if c.upper() in ['STATION_CODE', 'STATION_COD', 'STN_CODE', 'STATIONCODE']:
                 return c
     except Exception: pass
     return 'STATION_CODE'
@@ -446,18 +439,27 @@ else:
 
 total_days = sum([sum([MONTH_DAYS.get(m, 30) for m in m_list]) for _, m_list in query_filters_curr])
 
-# Fetch Station Meta Details
+# Dynamic Station Meta Details Lookup from Excel Synced Table
 stn_name, cat, cmi_sec, cmi_name = "", "", "", ""
 try:
     with engine.connect() as conn:
-        stn_c_list = get_station_col(conn, 'station_list')
-        df_stn_info = pd.read_sql(text(f"SELECT * FROM station_list WHERE UPPER(TRIM(\"{stn_c_list}\")) = UPPER('{selected_station.strip()}') LIMIT 1"), conn)
-        if not df_stn_info.empty:
-            r = df_stn_info.iloc[0]
-            stn_name = r.get('STATION_NAME', r.get('STATION_NAM', ''))
-            cat = r.get('CATEGORY', r.get('CAT', ''))
-            cmi_sec = r.get('CMI_SECTION', r.get('CMI_SEC', ''))
-            cmi_name = r.get('CMI_NAME', r.get('CMI', ''))
+        df_stn_info = pd.read_sql(text("SELECT * FROM station_list LIMIT 10"), conn)
+        stn_col_match = None
+        for col in df_stn_info.columns:
+            if col.upper().replace('_', '').strip() in ['STATIONCODE', 'STATIONCOD', 'STNCODE']:
+                stn_col_match = col
+                break
+        
+        if stn_col_match:
+            q_stn = f'SELECT * FROM station_list WHERE UPPER(TRIM(CAST("{stn_col_match}" AS TEXT))) = UPPER(\'{selected_station.strip()}\') LIMIT 1'
+            df_matched = pd.read_sql(text(q_stn), conn)
+            if not df_matched.empty:
+                r = df_matched.iloc[0]
+                cols_dict = {str(k).upper().replace('_', '').strip(): v for k, v in r.items()}
+                stn_name = cols_dict.get('STATIONNAME', cols_dict.get('STNAME', ''))
+                cat = cols_dict.get('CATEGORY', cols_dict.get('CAT', ''))
+                cmi_sec = cols_dict.get('CMISECTION', cols_dict.get('CMISEC', ''))
+                cmi_name = cols_dict.get('CMINAME', cols_dict.get('CMI', ''))
 except Exception: pass
 
 # ----------------- DATA FETCHING FOR METRICS -----------------
@@ -504,7 +506,7 @@ comb_ear_curr = b_ear_curr + p_ear_curr
 comb_ear_prev = b_ear_prev + p_ear_prev
 
 # ----------------- HEADER AREA -----------------
-head_col1, head_col2 = st.columns([4, 1])
+head_col1, head_col2 = st.columns([4, 1.1])
 
 with head_col1:
     st.markdown('<div class="main-title">🚄 STATION EARNING & TRAFFIC EXECUTIVE DASHBOARD</div>', unsafe_allow_html=True)
@@ -513,9 +515,9 @@ with head_col1:
         st.markdown(f'<div class="station-meta-info">📍 Name: <b>{stn_name}</b> | Cat: <b>{cat}</b> | CMI Sec: <b>{cmi_sec}</b> | CMI: <b>{cmi_name}</b></div>', unsafe_allow_html=True)
 
 with head_col2:
-    st.markdown(f'<div class="days-badge" style="text-align:center; margin-top:5px;">🗓️ <b>{total_days} Days Selected</b></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="days-badge">🗓️ <b>{total_days} Days Selected</b></div>', unsafe_allow_html=True)
 
-st.markdown("<hr style='margin: 10px 0 15px 0; border:none; border-bottom:1px solid #cbd5e1;'>", unsafe_allow_html=True)
+st.markdown("<hr style='margin: 8px 0 14px 0; border:none; border-bottom:1px solid #cbd5e1;'>", unsafe_allow_html=True)
 
 # ----------------- TOP EXECUTIVE METRIC CARDS -----------------
 c1, c2, c3, c4, c5 = st.columns(5)
