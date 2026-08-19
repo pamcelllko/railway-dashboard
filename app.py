@@ -115,7 +115,6 @@ st.markdown("""
             }
         }
 
-        /* Fixed Top Cut-off Padding */
         .block-container { 
             padding-top: 3.2rem !important; 
             padding-bottom: 1rem !important;
@@ -142,10 +141,15 @@ st.markdown("""
             margin-top: 3px !important;
         }
         .station-meta-info {
-            font-size: 0.85rem !important;
+            font-size: 0.86rem !important;
             color: #1d4ed8 !important;
             font-weight: 700 !important;
-            margin-top: 4px !important;
+            margin-top: 5px !important;
+            background-color: #eff6ff;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid #bfdbfe;
+            display: inline-block;
         }
         .highlight-badge {
             background-color: #1e3a8a;
@@ -285,7 +289,7 @@ def get_station_col(conn, table_name='booking'):
     try:
         cols = pd.read_sql(text(f'SELECT * FROM {table_name} LIMIT 1'), conn).columns
         for c in cols:
-            if c.upper() in ['STATION_CODE', 'STATION_COD', 'STN_CODE', 'STATIONCODE']:
+            if c.upper().replace('_', '').replace(' ', '').strip() in ['STATIONCODE', 'STATIONCOD', 'STNCODE']:
                 return c
     except Exception: pass
     return 'STATION_CODE'
@@ -439,27 +443,38 @@ else:
 
 total_days = sum([sum([MONTH_DAYS.get(m, 30) for m in m_list]) for _, m_list in query_filters_curr])
 
-# Dynamic Station Meta Details Lookup from Excel Synced Table
+# --- ULTRA-ROBUST STATION DETAILS FETCH ---
 stn_name, cat, cmi_sec, cmi_name = "", "", "", ""
 try:
     with engine.connect() as conn:
-        df_stn_info = pd.read_sql(text("SELECT * FROM station_list LIMIT 10"), conn)
-        stn_col_match = None
-        for col in df_stn_info.columns:
-            if col.upper().replace('_', '').strip() in ['STATIONCODE', 'STATIONCOD', 'STNCODE']:
-                stn_col_match = col
+        # Table name resolution (handles station_list, stationlist, Station List)
+        tables_res = conn.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'")).fetchall()
+        avail_tables = [t[0] for t in tables_res]
+        
+        target_tbl = None
+        for t in avail_tables:
+            if t.lower().replace('_', '').replace(' ', '') in ['stationlist', 'station']:
+                target_tbl = t
                 break
         
-        if stn_col_match:
-            q_stn = f'SELECT * FROM station_list WHERE UPPER(TRIM(CAST("{stn_col_match}" AS TEXT))) = UPPER(\'{selected_station.strip()}\') LIMIT 1'
-            df_matched = pd.read_sql(text(q_stn), conn)
-            if not df_matched.empty:
-                r = df_matched.iloc[0]
-                cols_dict = {str(k).upper().replace('_', '').strip(): v for k, v in r.items()}
-                stn_name = cols_dict.get('STATIONNAME', cols_dict.get('STNAME', ''))
-                cat = cols_dict.get('CATEGORY', cols_dict.get('CAT', ''))
-                cmi_sec = cols_dict.get('CMISECTION', cols_dict.get('CMISEC', ''))
-                cmi_name = cols_dict.get('CMINAME', cols_dict.get('CMI', ''))
+        if target_tbl:
+            df_stn = pd.read_sql(text(f'SELECT * FROM "{target_tbl}"'), conn)
+            df_stn.columns = [str(c).upper().replace('_', '').replace(' ', '').strip() for c in df_stn.columns]
+            
+            code_col = None
+            for c in df_stn.columns:
+                if c in ['STATIONCODE', 'STATIONCOD', 'STNCODE', 'STATION']:
+                    code_col = c
+                    break
+            
+            if code_col:
+                matched = df_stn[df_stn[code_col].astype(str).str.strip().str.upper() == selected_station.strip().upper()]
+                if not matched.empty:
+                    r = matched.iloc[0]
+                    stn_name = r.get('STATIONNAME', r.get('STNAME', ''))
+                    cat = r.get('CATEGORY', r.get('CAT', ''))
+                    cmi_sec = r.get('CMISECTION', r.get('CMISEC', ''))
+                    cmi_name = r.get('CMINAME', r.get('CMI', ''))
 except Exception: pass
 
 # ----------------- DATA FETCHING FOR METRICS -----------------
@@ -511,8 +526,8 @@ head_col1, head_col2 = st.columns([4, 1.1])
 with head_col1:
     st.markdown('<div class="main-title">🚄 STATION EARNING & TRAFFIC EXECUTIVE DASHBOARD</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="station-subtitle">Station: <span class="highlight-badge">{selected_station}</span> | Session: <b>{selected_fmt_session}</b> | {display_period_text}</div>', unsafe_allow_html=True)
-    if stn_name:
-        st.markdown(f'<div class="station-meta-info">📍 Name: <b>{stn_name}</b> | Cat: <b>{cat}</b> | CMI Sec: <b>{cmi_sec}</b> | CMI: <b>{cmi_name}</b></div>', unsafe_allow_html=True)
+    if stn_name or cat or cmi_sec or cmi_name:
+        st.markdown(f'<div class="station-meta-info">📍 Name: <b>{stn_name}</b> | Cat: <b>{cat}</b> | CMI Sec: <b>{cmi_sec}</b> | CMI Name: <b>{cmi_name}</b></div>', unsafe_allow_html=True)
 
 with head_col2:
     st.markdown(f'<div class="days-badge">🗓️ <b>{total_days} Days Selected</b></div>', unsafe_allow_html=True)
