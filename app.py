@@ -8,6 +8,17 @@ from email.mime.text import MIMEText
 # ----------------- PAGE CONFIGURATION -----------------
 st.set_page_config(
     page_title="Railway Earning Executive Dashboard", 
+    page_icon="```python
+import streamlit as st
+import pandas as pd
+from sqlalchemy import create_engine, text
+import bcrypt
+import smtplib
+from email.mime.text import MIMEText
+
+# ----------------- PAGE CONFIGURATION -----------------
+st.set_page_config(
+    page_title="Railway Earning Executive Dashboard", 
     page_icon="🚄",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -46,7 +57,7 @@ def send_approval_email(new_user):
         if smtp_user and smtp_pass:
             email_body = f"""Respected {ADMIN_NAME},
 
-A new user '{new_user}' has requested access to the Railway Earning & Traffic Executive Dashboard.
+A user '{new_user}' has requested access to the Railway Earning & Traffic Executive Dashboard.
 
 Username: {new_user}
 Status: Pending Approval
@@ -54,7 +65,7 @@ Status: Pending Approval
 Please approve or manage this user directly in your Supabase Database (user_auth table).
 """
             msg = MIMEText(email_body)
-            msg['Subject'] = f"Action Required: New Dashboard Signup Request ({new_user})"
+            msg['Subject'] = f"Action Required: Dashboard Signup Request ({new_user})"
             msg['From'] = smtp_user
             msg['To'] = ADMIN_EMAIL
 
@@ -62,8 +73,11 @@ Please approve or manage this user directly in your Supabase Database (user_auth
             server.login(smtp_user, smtp_pass)
             server.sendmail(smtp_user, [ADMIN_EMAIL], msg.as_string())
             server.quit()
+            return True, "Approval Email Sent Successfully!"
+        else:
+            return False, "SMTP Credentials (SMTP_USER/SMTP_PASS) not found in Streamlit Secrets."
     except Exception as e:
-        pass
+        return False, f"Email sending failed: {str(e)}"
 
 def create_user(username, password):
     hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -90,7 +104,7 @@ def verify_user(username, password):
 # ----------------- CSS STYLING -----------------
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        @import url('[https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap)');
         
         .block-container { 
             padding-top: 1.5rem !important; 
@@ -104,7 +118,6 @@ st.markdown("""
             background-color: #f4f6f8 !important;
         }
 
-        /* Header Style */
         .header-box-img {
             background-color: #f0f4f6;
             padding: 10px 18px;
@@ -121,7 +134,6 @@ st.markdown("""
             letter-spacing: -0.2px;
         }
 
-        /* Station Info Box */
         .stn-info-card {
             background-color: #ffffff;
             border-left: 5px solid #0d3b36;
@@ -133,7 +145,6 @@ st.markdown("""
             color: #1e293b;
         }
 
-        /* Table Container */
         .table-bg-container {
             background-color: #f7f3ed;
             padding: 12px;
@@ -141,7 +152,6 @@ st.markdown("""
             border: 1px solid #e2dcd5;
         }
 
-        /* Custom Tab Bar */
         .tab-bar {
             display: flex;
             align-items: center;
@@ -166,7 +176,6 @@ st.markdown("""
             font-weight: 800;
         }
 
-        /* Table Styling */
         div[data-testid="stDataFrame"] table {
             background-color: #f7f3ed !important;
             border-collapse: collapse !important;
@@ -225,7 +234,7 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 
 if not st.session_state.authenticated:
-    st.markdown("<h2 style='text-align: center; color: #0d3b36; font-weight:800;'>🚄 Railway Earning Dashboard Access</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: #0d3b36; font-weight:800;'>Railway Earning Dashboard Access</h2>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.2, 1])
     with col2:
         auth_mode = st.radio("Choose Option", ["Login", "Sign Up / Create Account"], horizontal=True)
@@ -234,7 +243,9 @@ if not st.session_state.authenticated:
             with st.form("login_form"):
                 u_in = st.text_input("Username").strip()
                 p_in = st.text_input("Password", type="password").strip()
-                if st.form_submit_button("Login to Dashboard", use_container_width=True):
+                submit_login = st.form_submit_button("Login to Dashboard", use_container_width=True)
+                
+                if submit_login:
                     valid, status = verify_user(u_in, p_in)
                     if valid and status == 'APPROVED':
                         st.session_state.authenticated = True
@@ -243,133 +254,17 @@ if not st.session_state.authenticated:
                         st.rerun()
                     elif valid and status == 'PENDING':
                         st.warning(f"⚠️ Your account is PENDING approval from {ADMIN_NAME}.")
+                        st.session_state.pending_user = u_in
                     else:
                         st.error("Invalid Username or Password")
-        else:
-            st.subheader("📝 Create New Account")
-            with st.form("signup_form"):
-                nu = st.text_input("Choose Username").strip()
-                np = st.text_input("Choose Password", type="password").strip()
-                cp = st.text_input("Confirm Password", type="password").strip()
-                if st.form_submit_button("Register Account", use_container_width=True):
-                    if np != cp: st.error("Passwords do not match!")
-                    elif create_user(nu, np):
-                        st.success(f"✅ Signup Request Sent! Account will be active once approved by {ADMIN_NAME}.")
-                    else: st.error("Username already exists.")
-    st.stop()
-
-# ----------------- SIDEBAR & FILTERS -----------------
-st.sidebar.markdown(f"👤 **User:** `{st.session_state.username}`")
-if st.sidebar.button("🔒 Logout", use_container_width=True):
-    st.session_state.authenticated = False
-    st.rerun()
-
-st.sidebar.markdown("---")
-st.sidebar.header("🔍 Filters")
-
-MONTH_ORDER = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar']
-
-# Station Select
-try:
-    with engine.connect() as conn:
-        stns = sorted(pd.read_sql(text('SELECT DISTINCT "STATION_COD" FROM booking'), conn)['STATION_COD'].dropna().unique().tolist())
-    selected_station = st.sidebar.selectbox("Select Station", stns)
-except Exception as e:
-    st.error(f"Error loading stations: {e}"); st.stop()
-
-# Session Select
-try:
-    with engine.connect() as conn:
-        raw_sess = [str(s).split('.')[0].strip() for s in pd.read_sql(text('SELECT DISTINCT "SESSION" FROM booking ORDER BY "SESSION" DESC'), conn)['SESSION'].dropna().tolist()]
-        fmt_sess = [format_session(s) for s in raw_sess if len(s) == 6]
-    selected_fmt_session = st.sidebar.selectbox("Select Session", fmt_sess)
-    selected_raw_session = parse_session(selected_fmt_session)
-except Exception as e:
-    st.error(f"Error loading sessions: {e}"); st.stop()
-
-# Station Details Lookup from Excel Synced Table
-stn_details_html = ""
-try:
-    with engine.connect() as conn:
-        df_stn_info = pd.read_sql(text(f"SELECT * FROM station_list WHERE UPPER(TRIM(\"STATION_CODE\")) = UPPER('{selected_station.strip()}') LIMIT 1"), conn)
-        if not df_stn_info.empty:
-            row = df_stn_info.iloc[0]
-            stn_name = row.get('STATION_NAME', '')
-            cat = row.get('CATEGORY', '')
-            cmi_sec = row.get('CMI_SECTION', '')
-            cmi_name = row.get('CMI_NAME', '')
-            stn_details_html = f"<b>Station Name:</b> {stn_name} | <b>Category:</b> {cat} | <b>CMI Section:</b> {cmi_sec} | <b>CMI Name:</b> {cmi_name}"
-except Exception:
-    pass
-
-# ----------------- HEADER -----------------
-st.markdown("""
-    <div class="header-box-img">
-        <span style="font-size: 1.5rem;">🚂</span>
-        <span class="header-title-img">Station Earning & Traffic Executive Dashboard 📈</span>
-    </div>
-""", unsafe_allow_html=True)
-
-if stn_details_html:
-    st.markdown(f'<div class="stn-info-card">📍 {stn_details_html}</div>', unsafe_allow_html=True)
-
-# ----------------- TABLE FETCH & RENDER -----------------
-def fetch_table_data(table_name):
-    with engine.connect() as conn:
-        q = f'''
-            SELECT * FROM {table_name} 
-            WHERE UPPER(TRIM(CAST("STATION_COD" AS TEXT))) = UPPER('{selected_station.strip()}') 
-              AND CAST("SESSION" AS TEXT) = '{selected_raw_session}'
-        '''
-        try:
-            df = pd.read_sql(text(q), conn)
-            if not df.empty:
-                df['FMT SESSION'] = selected_fmt_session
-                return df
-        except Exception: conn.rollback()
-    return pd.DataFrame()
-
-tabs = ["Booking", "PRS Org", "Combined Passenger", "Goods", "Parcel", "Reservation"]
-selected_tab = st.radio("Select View", tabs, horizontal=True, label_visibility="collapsed")
-
-# Custom Tab Bar with Red Dividers Pipe
-tab_html = '<div class="tab-bar">'
-for t in tabs:
-    if t == selected_tab:
-        tab_html += f'<span class="tab-btn-active">{t.upper()}</span>'
-    else:
-        tab_html += f'<span class="tab-btn-inactive">{t}</span>'
-    if t != tabs[-1]:
-        tab_html += '<span class="divider-pipe">|</span>'
-tab_html += '</div>'
-
-st.markdown(f'<div class="table-bg-container">{tab_html}', unsafe_allow_html=True)
-
-tbl_name_map = {"Booking": "booking", "PRS Org": "reservation_org", "Goods": "goods", "Parcel": "parcel", "Reservation": "reservation"}
-current_table = tbl_name_map.get(selected_tab, "booking")
-
-df_data = fetch_table_data(current_table)
-
-if not df_data.empty:
-    num_cols = df_data.select_dtypes(include=['number']).columns
-    total_row = {c: df_data[c].sum() for c in num_cols}
-    if 'MONTH' in df_data.columns: total_row['MONTH'] = 'TOTAL'
-    if 'FMT SESSION' in df_data.columns: total_row['FMT SESSION'] = ''
-
-    df_totals = pd.concat([df_data, pd.DataFrame([total_row])], ignore_index=True)
-    df_totals.columns = [str(c).replace('_', ' ').title() for c in df_totals.columns]
-
-    column_config = {}
-    for col in df_totals.columns:
-        col_u = col.upper()
-        if 'PASSENGER' in col_u:
-            df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notnull(x) else "")
-        elif any(kw in col_u for kw in ['EARNING', 'FREIGHT', 'AMOUNT', 'CASH']):
-            df_totals[col] = df_totals[col].apply(lambda x: format_inr(x) if pd.notnull(x) else "")
-        column_config[col] = st.column_config.TextColumn(col, alignment="center")
-
-    st.dataframe(df_totals, use_container_width=True, hide_index=True, column_config=column_config, height=500)
-else:
-    st.info(f"No records for {selected_tab} in session {selected_fmt_session}")
-
-st.markdown('</div>', unsafe_allow_html=True)
+            
+            # --- RESEND EMAIL BUTTON IF PENDING ---
+            if "pending_user" in st.session_state:
+                st.markdown("---")
+                st.info(f"Did not receive approval email for '{st.session_state.pending_user}'?")
+                if st.button(f"📩 Resend Approval Email to {ADMIN_NAME}", use_container_width=True):
+                    success, msg = send_approval_email(st.session_state.pending_user)
+                    if success:
+                        st.success(f"✅ {msg}")
+                    else:
+                        st
