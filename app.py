@@ -15,6 +15,7 @@ st.set_page_config(
 
 # ----------------- SECURE DATABASE CREDENTIALS -----------------
 SUPABASE_URL = st.secrets.get("SUPABASE_URL", "postgresql://postgres.ggrpypensvabbvpyzqbx:pamcelllko2234723@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres").strip()
+ADMIN_NAME = "Mohammed Rafik"
 ADMIN_EMAIL = "adilrafeeque@gmail.com"
 
 @st.cache_resource
@@ -39,16 +40,24 @@ init_supabase_auth_db()
 
 def send_approval_email(new_user):
     try:
-        # Example SMTP Setup (Configure your email server in st.secrets if using Gmail SMTP)
-        smtp_user = st.secrets.get("SMTP_USER", "noreply.dashboard@gmail.com")
+        smtp_user = st.secrets.get("SMTP_USER", "")
         smtp_pass = st.secrets.get("SMTP_PASS", "")
         
-        msg = MIMEText(f"A new user '{new_user}' has requested signup on Railway Earning Dashboard.\n\nTo approve this account, please click link or update status in Database.")
-        msg['Subject'] = f"Action Required: New Dashboard Signup Request ({new_user})"
-        msg['From'] = smtp_user
-        msg['To'] = ADMIN_EMAIL
+        if smtp_user and smtp_pass:
+            email_body = f"""Respected {ADMIN_NAME},
 
-        if smtp_pass:
+A new user '{new_user}' has requested access to the Railway Earning & Traffic Executive Dashboard.
+
+Username: {new_user}
+Status: Pending Approval
+
+Please approve or manage this user directly in your Supabase Database (user_auth table).
+"""
+            msg = MIMEText(email_body)
+            msg['Subject'] = f"Action Required: New Dashboard Signup Request ({new_user})"
+            msg['From'] = smtp_user
+            msg['To'] = ADMIN_EMAIL
+
             server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
             server.login(smtp_user, smtp_pass)
             server.sendmail(smtp_user, [ADMIN_EMAIL], msg.as_string())
@@ -78,7 +87,7 @@ def verify_user(username, password):
                 return True, res[1]
     return False, "INVALID"
 
-# ----------------- CSS MATCHING EXACT IMAGE STYLING -----------------
+# ----------------- CSS STYLING -----------------
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -95,7 +104,7 @@ st.markdown("""
             background-color: #f4f6f8 !important;
         }
 
-        /* Image 1 Header Style */
+        /* Header Style */
         .header-box-img {
             background-color: #f0f4f6;
             padding: 10px 18px;
@@ -124,7 +133,7 @@ st.markdown("""
             color: #1e293b;
         }
 
-        /* Image 2 Table Container & Cream Background */
+        /* Table Container */
         .table-bg-container {
             background-color: #f7f3ed;
             padding: 12px;
@@ -132,7 +141,7 @@ st.markdown("""
             border: 1px solid #e2dcd5;
         }
 
-        /* Custom Tab Bar with Red Dividers */
+        /* Custom Tab Bar */
         .tab-bar {
             display: flex;
             align-items: center;
@@ -157,7 +166,7 @@ st.markdown("""
             font-weight: 800;
         }
 
-        /* Table Styling matching Image 2 */
+        /* Table Styling */
         div[data-testid="stDataFrame"] table {
             background-color: #f7f3ed !important;
             border-collapse: collapse !important;
@@ -233,7 +242,7 @@ if not st.session_state.authenticated:
                         st.success("Login Successful!")
                         st.rerun()
                     elif valid and status == 'PENDING':
-                        st.warning("⚠️ Your account is PENDING approval from adilrafeeque@gmail.com.")
+                        st.warning(f"⚠️ Your account is PENDING approval from {ADMIN_NAME}.")
                     else:
                         st.error("Invalid Username or Password")
         else:
@@ -245,7 +254,7 @@ if not st.session_state.authenticated:
                 if st.form_submit_button("Register Account", use_container_width=True):
                     if np != cp: st.error("Passwords do not match!")
                     elif create_user(nu, np):
-                        st.success("✅ Signup Request Sent! Account will be active once approved by adilrafeeque@gmail.com.")
+                        st.success(f"✅ Signup Request Sent! Account will be active once approved by {ADMIN_NAME}.")
                     else: st.error("Username already exists.")
     st.stop()
 
@@ -293,7 +302,7 @@ try:
 except Exception:
     pass
 
-# ----------------- HEADER (EXACT IMAGE 1 MATCH) -----------------
+# ----------------- HEADER -----------------
 st.markdown("""
     <div class="header-box-img">
         <span style="font-size: 1.5rem;">🚂</span>
@@ -304,7 +313,7 @@ st.markdown("""
 if stn_details_html:
     st.markdown(f'<div class="stn-info-card">📍 {stn_details_html}</div>', unsafe_allow_html=True)
 
-# ----------------- TABLE FETCH & RENDER (EXACT IMAGE 2 MATCH) -----------------
+# ----------------- TABLE FETCH & RENDER -----------------
 def fetch_table_data(table_name):
     with engine.connect() as conn:
         q = f'''
