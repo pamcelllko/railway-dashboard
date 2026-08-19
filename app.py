@@ -443,40 +443,27 @@ else:
 
 total_days = sum([sum([MONTH_DAYS.get(m, 30) for m in m_list]) for _, m_list in query_filters_curr])
 
-# --- FIXED STATION DETAILS FETCH FOR SUPABASE DB ---
+# --- EXACT EXCEL FORMAT MATCHING ('Station', 'Station Name', 'Category', 'Section', 'CMI Name') ---
 stn_name, cat, cmi_sec, cmi_name = "", "", "", ""
 try:
     with engine.connect() as conn:
-        tables_res = conn.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'")).fetchall()
-        avail_tables = [t[0] for t in tables_res]
+        df_stn = pd.read_sql(text('SELECT * FROM "station_list"'), conn)
+        # Normalizing columns
+        norm_map = {str(c).upper().replace('_', '').replace(' ', '').strip(): c for c in df_stn.columns}
         
-        target_tbl = None
-        for t in avail_tables:
-            clean_t = t.lower().replace('_', '').replace(' ', '').replace('-', '')
-            if 'station' in clean_t:
-                target_tbl = t
-                break
+        # 'Station' column for Station Code
+        code_col = norm_map.get('STATION', norm_map.get('STATIONCODE', norm_map.get('STNCODE', None)))
         
-        if target_tbl:
-            df_stn = pd.read_sql(text(f'SELECT * FROM "{target_tbl}"'), conn)
-            clean_cols = {str(c).upper().replace('_', '').replace(' ', '').strip(): c for c in df_stn.columns}
-            
-            code_col = None
-            for key in ['STATIONCODE', 'STATIONCOD', 'STNCODE', 'STATION', 'CODE']:
-                if key in clean_cols:
-                    code_col = clean_cols[key]
-                    break
-            
-            if code_col:
-                matched = df_stn[df_stn[code_col].astype(str).str.strip().str.upper() == selected_station.strip().upper()]
-                if not matched.empty:
-                    r = matched.iloc[0]
-                    r_dict = {str(k).upper().replace('_', '').replace(' ', '').strip(): v for k, v in r.items()}
-                    
-                    stn_name = r_dict.get('STATIONNAME', r_dict.get('STNAME', r_dict.get('NAME', '')))
-                    cat = r_dict.get('CATEGORY', r_dict.get('CAT', ''))
-                    cmi_sec = r_dict.get('CMISECTION', r_dict.get('CMISEC', r_dict.get('SECTION', '')))
-                    cmi_name = r_dict.get('CMINAME', r_dict.get('CMI', r_dict.get('OFFICER', '')))
+        if code_col:
+            matched = df_stn[df_stn[code_col].astype(str).str.strip().str.upper() == selected_station.strip().upper()]
+            if not matched.empty:
+                r = matched.iloc[0]
+                row_map = {str(k).upper().replace('_', '').replace(' ', '').strip(): v for k, v in r.items()}
+                
+                stn_name = row_map.get('STATIONNAME', row_map.get('STNAME', ''))
+                cat = row_map.get('CATEGORY', row_map.get('CAT', ''))
+                cmi_sec = row_map.get('SECTION', row_map.get('CMISECTION', ''))
+                cmi_name = row_map.get('CMINAME', row_map.get('CMI', ''))
 except Exception: pass
 
 # ----------------- DATA FETCHING FOR METRICS -----------------
