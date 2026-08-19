@@ -93,7 +93,7 @@ def verify_user(username, password):
 # ----------------- ADVANCED DYNAMIC CSS -----------------
 st.markdown("""
     <style>
-        @import url('[https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap)');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         
         :root {
             --bg-card: #ffffff;
@@ -127,14 +127,13 @@ st.markdown("""
             font-family: 'Inter', sans-serif !important;
         }
 
-        /* Header Title Area */
         .main-header-container {
             padding: 4px 0px 12px 0px;
             border-bottom: 2px solid var(--border-card);
             margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             flex-wrap: wrap;
             gap: 10px;
         }
@@ -154,7 +153,7 @@ st.markdown("""
             font-size: 0.83rem !important;
             color: #2563eb !important;
             font-weight: 700 !important;
-            margin-top: 2px !important;
+            margin-top: 3px !important;
         }
         .highlight-badge {
             background-color: #1e3a8a;
@@ -173,7 +172,6 @@ st.markdown("""
             border: 1px solid var(--border-card);
         }
 
-        /* Executive Top Metric Cards */
         .metric-card {
             background: var(--bg-card);
             border: 1px solid var(--border-card);
@@ -224,7 +222,6 @@ st.markdown("""
             border: 1px solid #ef4444 !important;
         }
 
-        /* Pill Tabs */
         .stTabs [data-baseweb="tab-list"] {
             gap: 6px !important;
             border-bottom: none !important;
@@ -246,7 +243,6 @@ st.markdown("""
             border-color: #2563eb !important;
         }
 
-        /* Clean Dynamic Table Alignment */
         div[data-testid="stDataFrame"] th, div[data-testid="stDataFrame"] th * {
             text-align: center !important;
             justify-content: center !important;
@@ -508,22 +504,18 @@ comb_ear_curr = b_ear_curr + p_ear_curr
 comb_ear_prev = b_ear_prev + p_ear_prev
 
 # ----------------- HEADER AREA -----------------
-meta_html = f'<div class="station-meta-info">📍 Name: {stn_name} | Cat: {cat} | CMI Sec: {cmi_sec} | CMI: {cmi_name}</div>' if stn_name else ''
+head_col1, head_col2 = st.columns([4, 1])
 
-st.markdown(f'''
-    <div class="main-header-container">
-        <div>
-            <div class="main-title">🚄 STATION EARNING & TRAFFIC EXECUTIVE DASHBOARD</div>
-            <div class="station-subtitle">
-                Station: <span class="highlight-badge">{selected_station}</span> | Session: <b>{selected_fmt_session}</b> | {display_period_text}
-            </div>
-            {meta_html}
-        </div>
-        <div class="days-badge">
-            🗓️ <b>{total_days} Days Selected</b>
-        </div>
-    </div>
-''', unsafe_allow_html=True)
+with head_col1:
+    st.markdown('<div class="main-title">🚄 STATION EARNING & TRAFFIC EXECUTIVE DASHBOARD</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="station-subtitle">Station: <span class="highlight-badge">{selected_station}</span> | Session: <b>{selected_fmt_session}</b> | {display_period_text}</div>', unsafe_allow_html=True)
+    if stn_name:
+        st.markdown(f'<div class="station-meta-info">📍 Name: <b>{stn_name}</b> | Cat: <b>{cat}</b> | CMI Sec: <b>{cmi_sec}</b> | CMI: <b>{cmi_name}</b></div>', unsafe_allow_html=True)
+
+with head_col2:
+    st.markdown(f'<div class="days-badge" style="text-align:center; margin-top:5px;">🗓️ <b>{total_days} Days Selected</b></div>', unsafe_allow_html=True)
+
+st.markdown("<hr style='margin: 10px 0 15px 0; border:none; border-bottom:1px solid #cbd5e1;'>", unsafe_allow_html=True)
 
 # ----------------- TOP EXECUTIVE METRIC CARDS -----------------
 c1, c2, c3, c4, c5 = st.columns(5)
