@@ -8,17 +8,6 @@ from email.mime.text import MIMEText
 # ----------------- PAGE CONFIGURATION -----------------
 st.set_page_config(
     page_title="Railway Earning Executive Dashboard", 
-    page_icon="```python
-import streamlit as st
-import pandas as pd
-from sqlalchemy import create_engine, text
-import bcrypt
-import smtplib
-from email.mime.text import MIMEText
-
-# ----------------- PAGE CONFIGURATION -----------------
-st.set_page_config(
-    page_title="Railway Earning Executive Dashboard", 
     page_icon="🚄",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -214,57 +203,4 @@ def format_inr(number):
         return f"-{res}" if is_neg else res
     except Exception: return str(number)
 
-def format_plain_number(number):
-    try:
-        if pd.isna(number) or number is None: return ""
-        return str(int(round(float(number))))
-    except Exception: return str(number)
-
-def format_session(raw_s):
-    s = str(raw_s).split('.')[0].strip()
-    return f"{s[:4]}-{s[4:]}" if len(s) == 6 else s
-
-def parse_session(fmt_s):
-    return str(fmt_s).replace('-', '').strip()
-
-# ----------------- LOGIN PAGE -----------------
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-if "username" not in st.session_state:
-    st.session_state.username = ""
-
-if not st.session_state.authenticated:
-    st.markdown("<h2 style='text-align: center; color: #0d3b36; font-weight:800;'>Railway Earning Dashboard Access</h2>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 1.2, 1])
-    with col2:
-        auth_mode = st.radio("Choose Option", ["Login", "Sign Up / Create Account"], horizontal=True)
-        if auth_mode == "Login":
-            st.subheader("🔑 User Login")
-            with st.form("login_form"):
-                u_in = st.text_input("Username").strip()
-                p_in = st.text_input("Password", type="password").strip()
-                submit_login = st.form_submit_button("Login to Dashboard", use_container_width=True)
-                
-                if submit_login:
-                    valid, status = verify_user(u_in, p_in)
-                    if valid and status == 'APPROVED':
-                        st.session_state.authenticated = True
-                        st.session_state.username = u_in
-                        st.success("Login Successful!")
-                        st.rerun()
-                    elif valid and status == 'PENDING':
-                        st.warning(f"⚠️ Your account is PENDING approval from {ADMIN_NAME}.")
-                        st.session_state.pending_user = u_in
-                    else:
-                        st.error("Invalid Username or Password")
-            
-            # --- RESEND EMAIL BUTTON IF PENDING ---
-            if "pending_user" in st.session_state:
-                st.markdown("---")
-                st.info(f"Did not receive approval email for '{st.session_state.pending_user}'?")
-                if st.button(f"📩 Resend Approval Email to {ADMIN_NAME}", use_container_width=True):
-                    success, msg = send_approval_email(st.session_state.pending_user)
-                    if success:
-                        st.success(f"✅ {msg}")
-                    else:
-                        st
+def format_plain_number
