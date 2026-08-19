@@ -8,17 +8,6 @@ from email.mime.text import MIMEText
 # ----------------- PAGE CONFIGURATION -----------------
 st.set_page_config(
     page_title="Railway Earning Executive Dashboard", 
-    page_icon="```python
-import streamlit as st
-import pandas as pd
-from sqlalchemy import create_engine, text
-import bcrypt
-import smtplib
-from email.mime.text import MIMEText
-
-# ----------------- PAGE CONFIGURATION -----------------
-st.set_page_config(
-    page_title="Railway Earning Executive Dashboard", 
     page_icon="🚄",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -518,7 +507,7 @@ comb_pass_curr = b_pass_curr + p_pass_curr
 comb_ear_curr = b_ear_curr + p_ear_curr
 comb_ear_prev = b_ear_prev + p_ear_prev
 
-# ----------------- HEADER AREA (FIXED CLEAN HTML) -----------------
+# ----------------- HEADER AREA -----------------
 meta_html = f'<div class="station-meta-info">📍 Name: {stn_name} | Cat: {cat} | CMI Sec: {cmi_sec} | CMI: {cmi_name}</div>' if stn_name else ''
 
 st.markdown(f'''
