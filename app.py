@@ -90,100 +90,176 @@ def verify_user(username, password):
                 return True, res[1]
     return False, "INVALID"
 
-# ----------------- CSS STYLING -----------------
+# ----------------- ADVANCED DYNAMIC CSS -----------------
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         
+        :root {
+            --bg-card: #ffffff;
+            --border-card: #cbd5e1;
+            --text-main: #0f172a;
+            --text-sub: #334155;
+            --text-muted: #64748b;
+            --table-header-bg: #f8fafc;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-card: #1e293b;
+                --border-card: #334155;
+                --text-main: #f8fafc;
+                --text-sub: #cbd5e1;
+                --text-muted: #94a3b8;
+                --table-header-bg: #0f172a;
+            }
+        }
+
         .block-container { 
-            padding-top: 1.5rem !important; 
+            padding-top: 2rem !important; 
             padding-bottom: 1rem !important;
-            padding-left: 1.5rem !important;
-            padding-right: 1.5rem !important;
+            padding-left: 1.2rem !important;
+            padding-right: 1.2rem !important;
+            max-width: 100% !important;
         }
         
         html, body, [class*="css"] {
             font-family: 'Inter', sans-serif !important;
-            background-color: #f4f6f8 !important;
         }
 
-        .header-box-img {
-            background-color: #f0f4f6;
-            padding: 10px 18px;
-            border-radius: 4px;
+        /* Header Title Area */
+        .main-header-container {
+            padding: 4px 0px 12px 0px;
+            border-bottom: 2px solid var(--border-card);
+            margin-bottom: 12px;
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 15px;
-        }
-        .header-title-img {
-            font-size: 1.4rem !important;
-            font-weight: 800 !important;
-            color: #0d3b36 !important;
-            letter-spacing: -0.2px;
-        }
-
-        .stn-info-card {
-            background-color: #ffffff;
-            border-left: 5px solid #0d3b36;
-            padding: 10px 16px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            font-size: 0.9rem;
-            color: #1e293b;
-        }
-
-        .table-bg-container {
-            background-color: #f7f3ed;
-            padding: 12px;
-            border-radius: 6px;
-            border: 1px solid #e2dcd5;
-        }
-
-        .tab-bar {
-            display: flex;
-            align-items: center;
+            flex-wrap: wrap;
             gap: 10px;
-            margin-bottom: 10px;
-            font-weight: 700;
-            font-size: 0.92rem;
         }
-        .tab-btn-active {
-            background-color: #0d3b36;
+        .main-title {
+            font-size: 1.35rem !important;
+            font-weight: 900 !important;
+            color: var(--text-main) !important;
+            letter-spacing: -0.3px;
+        }
+        .station-subtitle {
+            font-size: 0.9rem !important;
+            color: var(--text-sub) !important;
+            font-weight: 600 !important;
+            margin-top: 3px !important;
+        }
+        .station-meta-info {
+            font-size: 0.83rem !important;
+            color: #2563eb !important;
+            font-weight: 700 !important;
+            margin-top: 2px !important;
+        }
+        .highlight-badge {
+            background-color: #1e3a8a;
             color: #ffffff !important;
-            padding: 4px 16px;
-            border-radius: 18px;
-            text-transform: uppercase;
-        }
-        .tab-btn-inactive {
-            color: #000000;
-            padding: 4px 8px;
-        }
-        .divider-pipe {
-            color: #dc2626;
+            padding: 2px 8px;
+            border-radius: 5px;
             font-weight: 800;
         }
+        .days-badge {
+            font-size: 0.85rem;
+            font-weight: 800;
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-card);
+        }
 
-        div[data-testid="stDataFrame"] table {
-            background-color: #f7f3ed !important;
-            border-collapse: collapse !important;
-            width: 100% !important;
+        /* Executive Top Metric Cards */
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 10px;
+            padding: 10px 6px;
+            text-align: center !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+            min-height: 140px !important;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
         }
-        div[data-testid="stDataFrame"] th {
-            background-color: #f7f3ed !important;
-            color: #000000 !important;
+        .metric-title {
+            font-size: 0.74rem;
+            font-weight: 800;
+            color: var(--text-sub);
+            text-transform: uppercase;
+        }
+        .metric-value {
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+            margin: 2px 0;
+        }
+        .metric-sub {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .metric-delta-pos {
+            font-size: 0.75rem !important;
+            font-weight: 900 !important;
+            color: #15803d !important;
+            background-color: #dcfce7 !important;
+            padding: 2px 10px !important;
+            border-radius: 20px !important;
+            border: 1px solid #16a34a !important;
+        }
+        .metric-delta-neg {
+            font-size: 0.75rem !important;
+            font-weight: 900 !important;
+            color: #b91c1c !important;
+            background-color: #fee2e2 !important;
+            padding: 2px 10px !important;
+            border-radius: 20px !important;
+            border: 1px solid #ef4444 !important;
+        }
+
+        /* Pill Tabs */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 6px !important;
+            border-bottom: none !important;
+            margin-bottom: 10px !important;
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 32px;
+            padding: 0 16px !important;
+            font-weight: 700 !important;
+            font-size: 0.82rem !important;
+            border-radius: 20px !important;
+            color: var(--text-sub) !important;
+            background-color: var(--bg-card) !important;
+            border: 1px solid var(--border-card) !important;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #2563eb !important;
+            color: #ffffff !important;
+            border-color: #2563eb !important;
+        }
+
+        /* Clean Dynamic Table Alignment */
+        div[data-testid="stDataFrame"] th, div[data-testid="stDataFrame"] th * {
+            text-align: center !important;
+            justify-content: center !important;
+            background-color: var(--table-header-bg) !important;
+            color: var(--text-main) !important;
             font-weight: 800 !important;
-            border: 1px solid #e2dcd5 !important;
-            text-align: center !important;
-            font-size: 0.85rem !important;
+            font-size: 0.82rem !important;
         }
-        div[data-testid="stDataFrame"] td {
-            background-color: #f7f3ed !important;
-            color: #000000 !important;
-            border: 1px solid #e2dcd5 !important;
+        div[data-testid="stDataFrame"] td, div[data-testid="stDataFrame"] td * {
             text-align: center !important;
-            font-size: 0.85rem !important;
+            justify-content: center !important;
+            font-size: 0.82rem !important;
+            color: var(--text-main) !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -191,8 +267,7 @@ st.markdown("""
 # ----------------- HELPER FUNCTIONS -----------------
 def format_inr(number):
     try:
-        if pd.isna(number) or number is None: 
-            return "0"
+        if pd.isna(number) or number is None: return "0"
         val = round(float(number))
         is_neg = val < 0
         s = str(abs(val))
@@ -202,16 +277,13 @@ def format_inr(number):
             res = s[-2:] + "," + res
             s = s[:-2]
         return f"-{res}" if is_neg else res
-    except Exception: 
-        return str(number)
+    except Exception: return str(number)
 
 def format_plain_number(number):
     try:
-        if pd.isna(number) or number is None: 
-            return ""
+        if pd.isna(number) or number is None: return "0"
         return str(int(round(float(number))))
-    except Exception: 
-        return str(number)
+    except Exception: return str(number)
 
 def format_session(raw_s):
     s = str(raw_s).split('.')[0].strip()
@@ -226,9 +298,36 @@ def get_station_col(conn, table_name='booking'):
         for c in cols:
             if c.upper() in ['STATION_CODE', 'STATION_COD', 'STN_CODE']:
                 return c
-    except Exception: 
-        pass
+    except Exception: pass
     return 'STATION_CODE'
+
+def get_pass_col(table_name):
+    try:
+        with engine.connect() as conn:
+            cols = [c.upper() for c in pd.read_sql(text(f'SELECT * FROM {table_name} LIMIT 1'), conn).columns]
+            if 'PASSENGERS' in cols: return 'PASSENGERS'
+            if 'PASSENGER' in cols: return 'PASSENGER'
+    except Exception: pass
+    return 'PASSENGER'
+
+def get_freight_col(table_name):
+    try:
+        with engine.connect() as conn:
+            cols = [c.upper() for c in pd.read_sql(text(f'SELECT * FROM {table_name} LIMIT 1'), conn).columns]
+            if 'OW_FRIEGHT' in cols: return 'OW_FRIEGHT'
+            if 'OW_FREIGHT' in cols: return 'OW_FREIGHT'
+    except Exception: pass
+    return 'OW_FRIEGHT'
+
+# ----------------- CONSTANTS -----------------
+MONTH_DAYS = {'Apr': 30, 'May': 31, 'Jun': 30, 'Jul': 31, 'Aug': 31, 'Sep': 30, 'Oct': 31, 'Nov': 30, 'Dec': 31, 'Jan': 31, 'Feb': 28, 'Mar': 31}
+MONTH_ORDER = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar']
+QUARTERS = {
+    'Q1 (Apr-Jun)': ['Apr', 'May', 'Jun'],
+    'Q2 (Jul-Sep)': ['Jul', 'Aug', 'Sep'],
+    'Q3 (Oct-Dec)': ['Oct', 'Nov', 'Dec'],
+    'Q4 (Jan-Mar)': ['Jan', 'Feb', 'Mar']
+}
 
 # ----------------- LOGIN PAGE -----------------
 if "authenticated" not in st.session_state:
@@ -237,7 +336,7 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 
 if not st.session_state.authenticated:
-    st.markdown("<h2 style='text-align: center; color: #0d3b36; font-weight:800;'>Railway Earning Dashboard Access</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: var(--text-main); font-weight:800;'>🚄 Railway Earning Dashboard Access</h2>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.2, 1])
     with col2:
         auth_mode = st.radio("Choose Option", ["Login", "Sign Up / Create Account"], horizontal=True)
@@ -261,16 +360,12 @@ if not st.session_state.authenticated:
                     else:
                         st.error("Invalid Username or Password")
             
-            # --- RESEND EMAIL BUTTON IF PENDING ---
             if "pending_user" in st.session_state:
                 st.markdown("---")
-                st.info(f"Did not receive approval email for '{st.session_state.pending_user}'?")
                 if st.button(f"📩 Resend Approval Email to {ADMIN_NAME}", use_container_width=True):
                     success, msg = send_approval_email(st.session_state.pending_user)
-                    if success:
-                        st.success(f"✅ {msg}")
-                    else:
-                        st.error(f"❌ {msg}")
+                    if success: st.success(f"✅ {msg}")
+                    else: st.error(f"❌ {msg}")
                         
         else:
             st.subheader("📝 Create New Account")
@@ -279,12 +374,9 @@ if not st.session_state.authenticated:
                 np = st.text_input("Choose Password", type="password").strip()
                 cp = st.text_input("Confirm Password", type="password").strip()
                 if st.form_submit_button("Register Account", use_container_width=True):
-                    if np != cp: 
-                        st.error("Passwords do not match!")
-                    elif create_user(nu, np):
-                        st.success(f"✅ Signup Request Registered! Approval email sent to {ADMIN_NAME}.")
-                    else: 
-                        st.error("Username already exists in pending or active accounts. Try a different username.")
+                    if np != cp: st.error("Passwords do not match!")
+                    elif create_user(nu, np): st.success(f"✅ Signup Request Sent! Approval email sent to {ADMIN_NAME}.")
+                    else: st.error("Username already exists.")
     st.stop()
 
 # ----------------- SIDEBAR & FILTERS -----------------
@@ -294,19 +386,16 @@ if st.sidebar.button("🔒 Logout", use_container_width=True):
     st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.header("🔍 Filters")
+st.sidebar.header("🔍 Dashboard Filters")
 
-MONTH_ORDER = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar']
-
-# Dynamic Station Select
+# Station Select
 try:
     with engine.connect() as conn:
         stn_col = get_station_col(conn, 'booking')
         stns = sorted(pd.read_sql(text(f'SELECT DISTINCT "{stn_col}" FROM booking'), conn)[stn_col].dropna().unique().tolist())
     selected_station = st.sidebar.selectbox("Select Station", stns)
 except Exception as e:
-    st.error(f"Error loading stations: {e}")
-    st.stop()
+    st.error(f"Error loading stations: {e}"); st.stop()
 
 # Session Select
 try:
@@ -316,83 +405,209 @@ try:
     selected_fmt_session = st.sidebar.selectbox("Select Session", fmt_sess)
     selected_raw_session = parse_session(selected_fmt_session)
 except Exception as e:
-    st.error(f"Error loading sessions: {e}")
-    st.stop()
+    st.error(f"Error loading sessions: {e}"); st.stop()
 
-# Station Details Lookup from Excel Synced Table
-stn_details_html = ""
+start_yr = int(selected_raw_session[:4])
+end_yr = int(selected_raw_session[4:])
+prev_raw_session = f"{start_yr - 1:04d}{end_yr - 1:02d}"
+
+filter_type = st.sidebar.radio("Time Filter Type", ["Quarterly", "6 Months", "Full Year", "Last 3 Months", "Last 6 Months", "Custom Months"])
+
+query_filters_curr = []
+query_filters_prev = []
+
+if filter_type in ["Quarterly", "6 Months", "Full Year", "Custom Months"]:
+    if filter_type == "Quarterly":
+        selected_months = QUARTERS[st.sidebar.selectbox("Select Quarter", list(QUARTERS.keys()))]
+    elif filter_type == "6 Months":
+        h = st.sidebar.selectbox("Select Half", ["H1 (Apr-Sep)", "H2 (Oct-Mar)"])
+        selected_months = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'] if "H1" in h else ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar']
+    elif filter_type == "Full Year":
+        selected_months = MONTH_ORDER
+    else:
+        selected_months = st.sidebar.multiselect("Select Months", MONTH_ORDER, default=['Apr', 'May', 'Jun'])
+
+    query_filters_curr = [(selected_raw_session, selected_months)]
+    query_filters_prev = [(prev_raw_session, selected_months)]
+    display_period_text = f"Months: {', '.join(selected_months)}"
+else:
+    end_m = st.sidebar.selectbox("Current/Ending Month", MONTH_ORDER, index=3)
+    n_months = 3 if filter_type == "Last 3 Months" else 6
+    end_idx = MONTH_ORDER.index(end_m)
+    
+    if end_idx >= n_months - 1:
+        curr_m_list = MONTH_ORDER[end_idx - n_months + 1 : end_idx + 1]
+        query_filters_curr = [(selected_raw_session, curr_m_list)]
+        query_filters_prev = [(prev_raw_session, curr_m_list)]
+    else:
+        overlap_prev_count = n_months - (end_idx + 1)
+        prev_m_list = MONTH_ORDER[-overlap_prev_count:]
+        curr_m_list = MONTH_ORDER[:end_idx + 1]
+        query_filters_curr = [(prev_raw_session, prev_m_list), (selected_raw_session, curr_m_list)]
+        query_filters_prev = [(f"{start_yr - 2:04d}{end_yr - 2:02d}", prev_m_list), (prev_raw_session, curr_m_list)]
+
+    display_period_text = f"{filter_type} (Ending {end_m})"
+
+total_days = sum([sum([MONTH_DAYS.get(m, 30) for m in m_list]) for _, m_list in query_filters_curr])
+
+# Fetch Station Meta Details
+stn_name, cat, cmi_sec, cmi_name = "", "", "", ""
 try:
     with engine.connect() as conn:
         df_stn_info = pd.read_sql(text(f"SELECT * FROM station_list WHERE UPPER(TRIM(\"STATION_CODE\")) = UPPER('{selected_station.strip()}') LIMIT 1"), conn)
         if not df_stn_info.empty:
-            row = df_stn_info.iloc[0]
-            stn_name = row.get('STATION_NAME', '')
-            cat = row.get('CATEGORY', '')
-            cmi_sec = row.get('CMI_SECTION', '')
-            cmi_name = row.get('CMI_NAME', '')
-            stn_details_html = f"<b>Station Name:</b> {stn_name} | <b>Category:</b> {cat} | <b>CMI Section:</b> {cmi_sec} | <b>CMI Name:</b> {cmi_name}"
-except Exception:
-    pass
+            r = df_stn_info.iloc[0]
+            stn_name = r.get('STATION_NAME', '')
+            cat = r.get('CATEGORY', '')
+            cmi_sec = r.get('CMI_SECTION', '')
+            cmi_name = r.get('CMI_NAME', '')
+except Exception: pass
 
-# ----------------- HEADER -----------------
-st.markdown("""
-    <div class="header-box-img">
-        <span style="font-size: 1.5rem;">🚂</span>
-        <span class="header-title-img">Station Earning & Traffic Executive Dashboard 📈</span>
+# ----------------- DATA FETCHING FOR METRICS -----------------
+def fetch_total(table_name, filters_list, col_name):
+    total = 0.0
+    for sess, m_list in filters_list:
+        if not m_list: continue
+        m_str = "','".join([m.upper() for m in m_list])
+        with engine.connect() as conn:
+            stn_c = get_station_col(conn, table_name)
+            q = f'''
+                SELECT SUM("{col_name}") as val FROM {table_name}
+                WHERE UPPER(TRIM(CAST("{stn_c}" AS TEXT))) = UPPER('{selected_station.strip()}') 
+                  AND CAST("SESSION" AS TEXT) = '{sess}'
+                  AND UPPER(TRIM("MONTH")) IN ('{m_str}')
+            '''
+            try:
+                val = pd.read_sql(text(q), conn)['val'].iloc[0]
+                if pd.notnull(val): total += float(val)
+            except Exception: conn.rollback()
+    return total
+
+pass_col_booking = get_pass_col('booking')
+pass_col_prs = get_pass_col('reservation_org')
+goods_freight_col = get_freight_col('goods')
+parcel_freight_col = get_freight_col('parcel')
+
+b_ear_curr = fetch_total('booking', query_filters_curr, 'EARNING')
+b_ear_prev = fetch_total('booking', query_filters_prev, 'EARNING')
+b_pass_curr = fetch_total('booking', query_filters_curr, pass_col_booking)
+
+p_ear_curr = fetch_total('reservation_org', query_filters_curr, 'EARNINGS')
+p_ear_prev = fetch_total('reservation_org', query_filters_prev, 'EARNINGS')
+p_pass_curr = fetch_total('reservation_org', query_filters_curr, pass_col_prs)
+
+g_ear_curr = fetch_total('goods', query_filters_curr, goods_freight_col)
+g_ear_prev = fetch_total('goods', query_filters_prev, goods_freight_col)
+
+pr_ear_curr = fetch_total('parcel', query_filters_curr, parcel_freight_col)
+pr_ear_prev = fetch_total('parcel', query_filters_prev, parcel_freight_col)
+
+comb_pass_curr = b_pass_curr + p_pass_curr
+comb_ear_curr = b_ear_curr + p_ear_curr
+comb_ear_prev = b_ear_prev + p_ear_prev
+
+# ----------------- HEADER AREA -----------------
+st.markdown(f"""
+    <div class="main-header-container">
+        <div>
+            <div class="main-title">🚄 STATION EARNING & TRAFFIC EXECUTIVE DASHBOARD</div>
+            <div class="station-subtitle">
+                Station: <span class="highlight-badge">{selected_station}</span> | Session: <b>{selected_fmt_session}</b> | {display_period_text}
+            </div>
+            {'<div class="station-meta-info">📍 Name: ' + str(stn_name) + ' | Cat: ' + str(cat) + ' | CMI Sec: ' + str(cmi_sec) + ' | CMI: ' + str(cmi_name) + '</div>' if stn_name else ''}
+        </div>
+        <div class="days-badge">
+            🗓️ <b>{total_days} Days Selected</b>
+        </div>
     </div>
 """, unsafe_allow_html=True)
 
-if stn_details_html:
-    st.markdown(f'<div class="stn-info-card">📍 {stn_details_html}</div>', unsafe_allow_html=True)
+# ----------------- TOP EXECUTIVE METRIC CARDS -----------------
+c1, c2, c3, c4, c5 = st.columns(5)
 
-# ----------------- TABLE FETCH & RENDER -----------------
-def fetch_table_data(table_name):
-    with engine.connect() as conn:
-        stn_c = get_station_col(conn, table_name)
-        q = f'''
-            SELECT * FROM {table_name} 
-            WHERE UPPER(TRIM(CAST("{stn_c}" AS TEXT))) = UPPER('{selected_station.strip()}') 
-              AND CAST("SESSION" AS TEXT) = '{selected_raw_session}'
-        '''
-        try:
-            df = pd.read_sql(text(q), conn)
-            if not df.empty:
-                df['FMT SESSION'] = selected_fmt_session
-                return df
-        except Exception: 
-            conn.rollback()
-    return pd.DataFrame()
-
-tabs = ["Booking", "PRS Org", "Combined Passenger", "Goods", "Parcel", "Reservation"]
-selected_tab = st.radio("Select View", tabs, horizontal=True, label_visibility="collapsed")
-
-# Custom Tab Bar with Red Dividers Pipe
-tab_html = '<div class="tab-bar">'
-for t in tabs:
-    if t == selected_tab:
-        tab_html += f'<span class="tab-btn-active">{t.upper()}</span>'
+def render_centered_metric(col, title, curr, prev, days, is_combined=False, pass_val=0):
+    per_day = curr / days if days > 0 else 0
+    growth = ((curr - prev) / prev * 100) if prev > 0 else 0
+    delta_class = "metric-delta-pos" if growth >= 0 else "metric-delta-neg"
+    
+    if is_combined:
+        pass_per_day = pass_val / days if days > 0 else 0
+        content = f"""
+            <div class="metric-card" style="border-top: 4px solid #1e3a8a;">
+                <div class="metric-title">👥 COMBINED PASSENGER</div>
+                <div class="metric-value">₹ {format_inr(curr)}</div>
+                <div class="metric-sub">Pass: {format_plain_number(pass_val)} | P/Day: {format_plain_number(pass_per_day)}</div>
+                <div class="metric-sub">Ear/Day: ₹ {format_inr(per_day)}</div>
+                <div class="{delta_class}">{growth:+.1f}% vs Prev. Year</div>
+            </div>
+        """
     else:
-        tab_html += f'<span class="tab-btn-inactive">{t}</span>'
-    if t != tabs[-1]:
-        tab_html += '<span class="divider-pipe">|</span>'
-tab_html += '</div>'
+        content = f"""
+            <div class="metric-card">
+                <div class="metric-title">{title}</div>
+                <div class="metric-value">₹ {format_inr(curr)}</div>
+                <div style="flex-grow:1;"></div>
+                <div class="metric-sub">Ear/Day: ₹ {format_inr(per_day)}</div>
+                <div class="{delta_class}">{growth:+.1f}% vs Prev. Year</div>
+            </div>
+        """
+    col.markdown(content, unsafe_allow_html=True)
 
-st.markdown(f'<div class="table-bg-container">{tab_html}', unsafe_allow_html=True)
+render_centered_metric(c1, "Combined", comb_ear_curr, comb_ear_prev, total_days, is_combined=True, pass_val=comb_pass_curr)
+render_centered_metric(c2, "BOOKING EARNING", b_ear_curr, b_ear_prev, total_days)
+render_centered_metric(c3, "PRS ORG EARNING", p_ear_curr, p_ear_prev, total_days)
+render_centered_metric(c4, "GOODS FREIGHT", g_ear_curr, g_ear_prev, total_days)
+render_centered_metric(c5, "PARCEL FREIGHT", pr_ear_curr, pr_ear_prev, total_days)
 
-tbl_name_map = {"Booking": "booking", "PRS Org": "reservation_org", "Goods": "goods", "Parcel": "parcel", "Reservation": "reservation"}
-current_table = tbl_name_map.get(selected_tab, "booking")
+st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
-df_data = fetch_table_data(current_table)
+# ----------------- TABS & TABLES -----------------
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "Booking", "PRS Org", "Combined Passenger", "Goods", "Parcel", "Reservation"
+])
 
-if not df_data.empty:
-    num_cols = df_data.select_dtypes(include=['number']).columns
-    total_row = {c: df_data[c].sum() for c in num_cols}
-    if 'MONTH' in df_data.columns: 
-        total_row['MONTH'] = 'TOTAL'
-    if 'FMT SESSION' in df_data.columns: 
-        total_row['FMT SESSION'] = ''
+def fetch_table_filtered(table_name):
+    frames = []
+    for sess, m_list in query_filters_curr:
+        if not m_list: continue
+        m_str = "','".join([m.upper() for m in m_list])
+        with engine.connect() as conn:
+            stn_c = get_station_col(conn, table_name)
+            q = f'''
+                SELECT * FROM {table_name} 
+                WHERE UPPER(TRIM(CAST("{stn_c}" AS TEXT))) = UPPER('{selected_station.strip()}') 
+                  AND CAST("SESSION" AS TEXT) = '{sess}'
+                  AND UPPER(TRIM("MONTH")) IN ('{m_str}')
+            '''
+            try:
+                df = pd.read_sql(text(q), conn)
+                if not df.empty:
+                    df['Fmt Session'] = format_session(sess)
+                    frames.append(df)
+            except Exception: conn.rollback()
+            
+    if not frames: return pd.DataFrame()
+    full_df = pd.concat(frames, ignore_index=True)
+    drop_cols = ['STATION_CODE', 'STATION_COD', 'SESSION', 'station_code', 'station_cod', 'session']
+    full_df = full_df.drop(columns=[c for c in drop_cols if c in full_df.columns])
+    
+    if 'MONTH' in full_df.columns:
+        full_df['MONTH_CAT'] = pd.Categorical(full_df['MONTH'], categories=MONTH_ORDER, ordered=True)
+        full_df = full_df.sort_values(['Fmt Session', 'MONTH_CAT']).drop(columns=['MONTH_CAT'])
+    return full_df
 
-    df_totals = pd.concat([df_data, pd.DataFrame([total_row])], ignore_index=True)
+def render_table_with_totals(df, title):
+    if df.empty:
+        st.info(f"No records available for {title} in selected period.")
+        return
+        
+    num_cols = df.select_dtypes(include=['number']).columns
+    total_row = {c: df[c].sum() for c in num_cols}
+    
+    if 'MONTH' in df.columns: total_row['MONTH'] = 'TOTAL'
+    if 'Fmt Session' in df.columns: total_row['Fmt Session'] = 'ALL'
+    
+    df_totals = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
     df_totals.columns = [str(c).replace('_', ' ').title() for c in df_totals.columns]
 
     column_config = {}
@@ -402,10 +617,58 @@ if not df_data.empty:
             df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notnull(x) else "")
         elif any(kw in col_u for kw in ['EARNING', 'FREIGHT', 'AMOUNT', 'CASH']):
             df_totals[col] = df_totals[col].apply(lambda x: format_inr(x) if pd.notnull(x) else "")
+        else:
+            if col in num_cols:
+                df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notnull(x) else "")
         column_config[col] = st.column_config.TextColumn(col, alignment="center")
 
-    st.dataframe(df_totals, use_container_width=True, hide_index=True, column_config=column_config, height=500)
-else:
-    st.info(f"No records for {selected_tab} in session {selected_fmt_session}")
+    st.dataframe(
+        df_totals, 
+        use_container_width=True, 
+        hide_index=True,
+        column_config=column_config,
+        height=min(500, (len(df_totals) + 1) * 36)
+    )
 
-st.markdown('</div>', unsafe_allow_html=True)
+with tab1:
+    render_table_with_totals(fetch_table_filtered('booking'), "Booking")
+
+with tab2:
+    render_table_with_totals(fetch_table_filtered('reservation_org'), "PRS Org")
+
+with tab3:
+    df_b = fetch_table_filtered('booking')
+    df_p = fetch_table_filtered('reservation_org')
+    
+    if not df_b.empty or not df_p.empty:
+        if not df_b.empty: df_b.columns = [c.upper() for c in df_b.columns]
+        if not df_p.empty: df_p.columns = [c.upper() for c in df_p.columns]
+        
+        m_df = pd.merge(df_b, df_p, on=['FMT SESSION', 'MONTH'], how='outer', suffixes=('_BOOKING', '_PRS'))
+        combined = pd.DataFrame()
+        combined['Month'] = m_df['MONTH']
+        
+        pass_b = m_df.get('PASSENGERS_BOOKING', m_df.get('PASSENGER_BOOKING', 0)).fillna(0)
+        pass_p = m_df.get('PASSENGERS_PRS', m_df.get('PASSENGER_PRS', 0)).fillna(0)
+        
+        combined['Passengers'] = pass_b + pass_p
+        combined['Booking Earning'] = m_df.get('EARNING', 0).fillna(0)
+        combined['PRS Earning'] = m_df.get('EARNINGS', 0).fillna(0)
+        combined['Total Earning'] = combined['Booking Earning'] + combined['PRS Earning']
+        combined['Fmt Session'] = m_df['FMT SESSION']
+        
+        render_table_with_totals(combined, "Combined Passenger")
+    else:
+        st.info("Combined data unavailable for selected period.")
+
+with tab4:
+    render_table_with_totals(fetch_table_filtered('goods'), "Goods")
+
+with tab5:
+    render_table_with_totals(fetch_table_filtered('parcel'), "Parcel")
+
+with tab6:
+    df_res = fetch_table_filtered('reservation')
+    if 'NET_CASH' in df_res.columns:
+        df_res = df_res.rename(columns={'NET_CASH': 'EARNING (NET_CASH)'})
+    render_table_with_totals(df_res, "Reservation")
