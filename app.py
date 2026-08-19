@@ -220,6 +220,16 @@ def format_session(raw_s):
 def parse_session(fmt_s):
     return str(fmt_s).replace('-', '').strip()
 
+def get_station_col(conn, table_name='booking'):
+    try:
+        cols = pd.read_sql(text(f'SELECT * FROM {table_name} LIMIT 1'), conn).columns
+        for c in cols:
+            if c.upper() in ['STATION_CODE', 'STATION_COD', 'STN_CODE']:
+                return c
+    except Exception: 
+        pass
+    return 'STATION_CODE'
+
 # ----------------- LOGIN PAGE -----------------
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
@@ -288,10 +298,11 @@ st.sidebar.header("🔍 Filters")
 
 MONTH_ORDER = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar']
 
-# Station Select
+# Dynamic Station Select
 try:
     with engine.connect() as conn:
-        stns = sorted(pd.read_sql(text('SELECT DISTINCT "STATION_COD" FROM booking'), conn)['STATION_COD'].dropna().unique().tolist())
+        stn_col = get_station_col(conn, 'booking')
+        stns = sorted(pd.read_sql(text(f'SELECT DISTINCT "{stn_col}" FROM booking'), conn)[stn_col].dropna().unique().tolist())
     selected_station = st.sidebar.selectbox("Select Station", stns)
 except Exception as e:
     st.error(f"Error loading stations: {e}")
@@ -337,9 +348,10 @@ if stn_details_html:
 # ----------------- TABLE FETCH & RENDER -----------------
 def fetch_table_data(table_name):
     with engine.connect() as conn:
+        stn_c = get_station_col(conn, table_name)
         q = f'''
             SELECT * FROM {table_name} 
-            WHERE UPPER(TRIM(CAST("STATION_COD" AS TEXT))) = UPPER('{selected_station.strip()}') 
+            WHERE UPPER(TRIM(CAST("{stn_c}" AS TEXT))) = UPPER('{selected_station.strip()}') 
               AND CAST("SESSION" AS TEXT) = '{selected_raw_session}'
         '''
         try:
