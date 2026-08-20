@@ -4,6 +4,8 @@ from sqlalchemy import create_engine, text
 import bcrypt
 import smtplib
 from email.mime.text import MIMEText
+import base64
+import os
 
 # ----------------- PAGE CONFIGURATION -----------------
 st.set_page_config(
@@ -22,24 +24,35 @@ ADMIN_EMAIL = "adilrafeeque@gmail.com"
 def get_database_connection():
     return create_engine(
         SUPABASE_URL, 
-        pool_size=10,
-        max_overflow=20,
-        pool_pre_ping=True
+        pool_size=15,
+        max_overflow=25,
+        pool_pre_ping=True,
+        isolation_level="AUTOCOMMIT"
     )
 
 engine = get_database_connection()
 
-# ----------------- INLINE SVG TRAIN LOGO -----------------
-TRAIN_LOGO_SVG = """
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="34" height="34" style="vertical-align: middle; fill: #1d4ed8;">
-  <path d="M480 384c0 13.255-10.745 24-24 24H56c-13.255 0-24-10.745-24-24s10.745-24 24-24h400c13.255 0 24 10.745 24 24zM88 320l-48 96h432l-48-96H88zm320-192c0-35.346-28.654-64-64-64H168c-35.346 0-64 28.654-64 64v160h304V128zm-224 0h144v48H184v-48z"/>
-</svg>
-"""
+# ----------------- IMAGE & TRAIN LOGO ENCODING -----------------
+def get_train_logo_html():
+    img_path = "transport.png"
+    if os.path.exists(img_path):
+        try:
+            with open(img_path, "rb") as image_file:
+                encoded = base64.b64encode(image_file.read()).decode()
+            return f'<img src="data:image/png;base64,{encoded}" style="width:38px; height:38px; vertical-align:middle; margin-right:8px;">'
+        except Exception: pass
+    
+    # Crisp Dark Vector Train Logo (Fallback)
+    return """
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="36" height="36" style="vertical-align: middle; fill: #1d4ed8; margin-right:8px;">
+      <path d="M480 384c0 13.255-10.745 24-24 24H56c-13.255 0-24-10.745-24-24s10.745-24 24-24h400c13.255 0 24 10.745 24 24zM88 320l-48 96h432l-48-96H88zm320-192c0-35.346-28.654-64-64-64H168c-35.346 0-64 28.654-64 64v160h304V128zm-224 0h144v48H184v-48z"/>
+    </svg>
+    """
 
 # ----------------- SUPABASE AUTH & EMAIL APPROVAL DB -----------------
 def init_supabase_auth_db():
     try:
-        with engine.begin() as conn:
+        with engine.connect() as conn:
             conn.execute(text('''
                 CREATE TABLE IF NOT EXISTS user_auth (
                     username TEXT PRIMARY KEY,
@@ -84,7 +97,7 @@ Please approve or manage this user directly in your Supabase Database (user_auth
 def create_user(username, password):
     hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     try:
-        with engine.begin() as conn:
+        with engine.connect() as conn:
             conn.execute(text('INSERT INTO user_auth (username, password, status) VALUES (:u, :p, :s)'), 
                          {'u': username, 'p': hashed, 's': 'PENDING'})
         send_approval_email(username)
@@ -107,7 +120,7 @@ def verify_user(username, password):
 # ----------------- ADVANCED ROBOTO TYPOGRAPHY & UI CSS -----------------
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
         
         :root {
             --bg-card: #ffffff;
@@ -130,7 +143,7 @@ st.markdown("""
         }
 
         .block-container { 
-            padding-top: 3rem !important; 
+            padding-top: 2.8rem !important; 
             padding-bottom: 1rem !important;
             padding-left: 1.2rem !important;
             padding-right: 1.2rem !important;
@@ -143,14 +156,13 @@ st.markdown("""
 
         .main-title {
             font-family: 'Roboto', sans-serif !important;
-            font-size: 1.4rem !important;
+            font-size: 1.45rem !important;
             font-weight: 900 !important;
             color: var(--text-main) !important;
             letter-spacing: -0.2px;
             line-height: 1.3 !important;
             display: flex;
             align-items: center;
-            gap: 10px;
         }
         .station-subtitle {
             font-family: 'Roboto', sans-serif !important;
@@ -331,8 +343,8 @@ def safe_get_station_col(conn, table_name='booking'):
     except Exception: pass
     return 'STATION'
 
-# ----------------- FAST CACHED DATABASE QUERIES -----------------
-@st.cache_data(ttl=600, show_spinner=False)
+# ----------------- LIGHTNING FAST CACHED DATABASE QUERIES -----------------
+@st.cache_data(ttl=3600, show_spinner=False)
 def load_all_stations():
     with engine.connect() as conn:
         try:
@@ -341,10 +353,9 @@ def load_all_stations():
             df = pd.read_sql(text(q), conn)
             return sorted(df['stn'].dropna().unique().tolist())
         except Exception:
-            conn.rollback()
             return ["ABP", "BSB", "LKO"]
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False)
 def load_all_sessions():
     with engine.connect() as conn:
         try:
@@ -352,10 +363,9 @@ def load_all_sessions():
             raw_sess = [str(s).split('.')[0].strip() for s in df['SESSION'].dropna().tolist()]
             return [format_session(s) for s in raw_sess if len(s) == 6]
         except Exception:
-            conn.rollback()
             return ["2026-27", "2025-26"]
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False)
 def fetch_station_details(station_code):
     try:
         with engine.connect() as conn:
@@ -377,7 +387,7 @@ def fetch_station_details(station_code):
     except Exception: pass
     return "", "", "", ""
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False)
 def fetch_aggregated_metric(table_name, station_code, sess, months_tuple, col_name):
     if not months_tuple: return 0.0
     m_str = "','".join([m.upper() for m in months_tuple])
@@ -393,10 +403,9 @@ def fetch_aggregated_metric(table_name, station_code, sess, months_tuple, col_na
             val = pd.read_sql(text(q), conn)['val'].iloc[0]
             return float(val) if pd.notnull(val) else 0.0
         except Exception: 
-            conn.rollback()
             return 0.0
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False)
 def fetch_tab_filtered_data(table_name, station_code, filters_tuple):
     frames = []
     with engine.connect() as conn:
@@ -415,8 +424,7 @@ def fetch_tab_filtered_data(table_name, station_code, filters_tuple):
                 if not df.empty:
                     df['Fmt Session'] = format_session(sess)
                     frames.append(df)
-            except Exception: 
-                conn.rollback()
+            except Exception: pass
             
     if not frames: return pd.DataFrame()
     full_df = pd.concat(frames, ignore_index=True)
@@ -579,13 +587,14 @@ comb_pass_curr = b_pass_curr + p_pass_curr
 comb_ear_curr = b_ear_curr + p_ear_curr
 comb_ear_prev = b_ear_prev + p_ear_prev
 
-# ----------------- HEADER AREA WITH CUSTOM TRAIN LOGO & ROBOTO -----------------
+# ----------------- HEADER AREA WITH TRAIN LOGO & ROBOTO -----------------
 head_col1, head_col2 = st.columns([4, 1.1])
 
 with head_col1:
+    train_icon = get_train_logo_html()
     st.markdown(f'''
         <div class="main-title">
-            {TRAIN_LOGO_SVG} STATION EARNING & TRAFFIC EXECUTIVE DASHBOARD
+            {train_icon} STATION EARNING & TRAFFIC EXECUTIVE DASHBOARD
         </div>
     ''', unsafe_allow_html=True)
     st.markdown(f'<div class="station-subtitle">Station: <span class="highlight-badge">{selected_station}</span> | Session: <b>{selected_fmt_session}</b> | {display_period_text}</div>', unsafe_allow_html=True)
