@@ -4,7 +4,6 @@ from sqlalchemy import create_engine, text
 import bcrypt
 import smtplib
 from email.mime.text import MIMEText
-import base64
 
 # ----------------- PAGE CONFIGURATION -----------------
 st.set_page_config(
@@ -39,15 +38,16 @@ TRAIN_LOGO_SVG = """
 
 # ----------------- SUPABASE AUTH & EMAIL APPROVAL DB -----------------
 def init_supabase_auth_db():
-    with engine.connect() as conn:
-        conn.execute(text('''
-            CREATE TABLE IF NOT EXISTS user_auth (
-                username TEXT PRIMARY KEY,
-                password TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'PENDING'
-            );
-        '''))
-        conn.commit()
+    try:
+        with engine.begin() as conn:
+            conn.execute(text('''
+                CREATE TABLE IF NOT EXISTS user_auth (
+                    username TEXT PRIMARY KEY,
+                    password TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'PENDING'
+                );
+            '''))
+    except Exception: pass
 
 init_supabase_auth_db()
 
@@ -77,17 +77,16 @@ Please approve or manage this user directly in your Supabase Database (user_auth
             server.quit()
             return True, "Approval Email Sent Successfully!"
         else:
-            return False, "SMTP Credentials (SMTP_USER/SMTP_PASS) not found in Streamlit Secrets."
+            return False, "SMTP Credentials not found in Streamlit Secrets."
     except Exception as e:
         return False, f"Email sending failed: {str(e)}"
 
 def create_user(username, password):
     hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     try:
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             conn.execute(text('INSERT INTO user_auth (username, password, status) VALUES (:u, :p, :s)'), 
                          {'u': username, 'p': hashed, 's': 'PENDING'})
-            conn.commit()
         send_approval_email(username)
         return True
     except Exception:
@@ -96,11 +95,13 @@ def create_user(username, password):
 def verify_user(username, password):
     if username == "StationEarning" and password == "pamcell2234723":
         return True, "APPROVED"
-    with engine.connect() as conn:
-        res = conn.execute(text('SELECT password, status FROM user_auth WHERE username = :u'), {'u': username}).fetchone()
-        if res:
-            if bcrypt.checkpw(password.encode('utf-8'), res[0].encode('utf-8')):
-                return True, res[1]
+    try:
+        with engine.connect() as conn:
+            res = conn.execute(text('SELECT password, status FROM user_auth WHERE username = :u'), {'u': username}).fetchone()
+            if res:
+                if bcrypt.checkpw(password.encode('utf-8'), res[0].encode('utf-8')):
+                    return True, res[1]
+    except Exception: pass
     return False, "INVALID"
 
 # ----------------- ADVANCED ROBOTO TYPOGRAPHY & UI CSS -----------------
@@ -320,24 +321,39 @@ def format_session(raw_s):
 def parse_session(fmt_s):
     return str(fmt_s).replace('-', '').strip()
 
+def safe_get_station_col(conn, table_name='booking'):
+    try:
+        df_cols = pd.read_sql(text(f'SELECT * FROM "{table_name}" LIMIT 1'), conn).columns
+        for c in df_cols:
+            c_clean = str(c).upper().replace('_', '').replace(' ', '').strip()
+            if c_clean in ['STATION', 'STATIONCODE', 'STNCODE', 'STATIONCOD']:
+                return c
+    except Exception: pass
+    return 'STATION'
+
 # ----------------- FAST CACHED DATABASE QUERIES -----------------
 @st.cache_data(ttl=600, show_spinner=False)
 def load_all_stations():
     with engine.connect() as conn:
-        q = text('SELECT DISTINCT "STATION" FROM booking UNION SELECT DISTINCT "STATION" FROM station_list')
         try:
-            df = pd.read_sql(q, conn)
-            return sorted(df['STATION'].dropna().unique().tolist())
+            stn_col = safe_get_station_col(conn, 'booking')
+            q = f'SELECT DISTINCT "{stn_col}" AS stn FROM booking'
+            df = pd.read_sql(text(q), conn)
+            return sorted(df['stn'].dropna().unique().tolist())
         except Exception:
-            df = pd.read_sql(text('SELECT DISTINCT "STATION" FROM booking'), conn)
-            return sorted(df['STATION'].dropna().unique().tolist())
+            conn.rollback()
+            return ["ABP", "BSB", "LKO"]
 
 @st.cache_data(ttl=600, show_spinner=False)
 def load_all_sessions():
     with engine.connect() as conn:
-        df = pd.read_sql(text('SELECT DISTINCT "SESSION" FROM booking ORDER BY "SESSION" DESC'), conn)
-        raw_sess = [str(s).split('.')[0].strip() for s in df['SESSION'].dropna().tolist()]
-        return [format_session(s) for s in raw_sess if len(s) == 6]
+        try:
+            df = pd.read_sql(text('SELECT DISTINCT "SESSION" FROM booking ORDER BY "SESSION" DESC'), conn)
+            raw_sess = [str(s).split('.')[0].strip() for s in df['SESSION'].dropna().tolist()]
+            return [format_session(s) for s in raw_sess if len(s) == 6]
+        except Exception:
+            conn.rollback()
+            return ["2026-27", "2025-26"]
 
 @st.cache_data(ttl=600, show_spinner=False)
 def fetch_station_details(station_code):
@@ -366,9 +382,10 @@ def fetch_aggregated_metric(table_name, station_code, sess, months_tuple, col_na
     if not months_tuple: return 0.0
     m_str = "','".join([m.upper() for m in months_tuple])
     with engine.connect() as conn:
+        stn_c = safe_get_station_col(conn, table_name)
         q = f'''
             SELECT SUM("{col_name}") as val FROM "{table_name}"
-            WHERE UPPER(TRIM(CAST("STATION" AS TEXT))) = UPPER('{station_code.strip()}') 
+            WHERE UPPER(TRIM(CAST("{stn_c}" AS TEXT))) = UPPER('{station_code.strip()}') 
               AND CAST("SESSION" AS TEXT) = '{sess}'
               AND UPPER(TRIM("MONTH")) IN ('{m_str}')
         '''
@@ -376,18 +393,20 @@ def fetch_aggregated_metric(table_name, station_code, sess, months_tuple, col_na
             val = pd.read_sql(text(q), conn)['val'].iloc[0]
             return float(val) if pd.notnull(val) else 0.0
         except Exception: 
+            conn.rollback()
             return 0.0
 
 @st.cache_data(ttl=600, show_spinner=False)
 def fetch_tab_filtered_data(table_name, station_code, filters_tuple):
     frames = []
     with engine.connect() as conn:
+        stn_c = safe_get_station_col(conn, table_name)
         for sess, m_list in filters_tuple:
             if not m_list: continue
             m_str = "','".join([m.upper() for m in m_list])
             q = f'''
                 SELECT * FROM "{table_name}" 
-                WHERE UPPER(TRIM(CAST("STATION" AS TEXT))) = UPPER('{station_code.strip()}') 
+                WHERE UPPER(TRIM(CAST("{stn_c}" AS TEXT))) = UPPER('{station_code.strip()}') 
                   AND CAST("SESSION" AS TEXT) = '{sess}'
                   AND UPPER(TRIM("MONTH")) IN ('{m_str}')
             '''
@@ -396,11 +415,12 @@ def fetch_tab_filtered_data(table_name, station_code, filters_tuple):
                 if not df.empty:
                     df['Fmt Session'] = format_session(sess)
                     frames.append(df)
-            except Exception: pass
+            except Exception: 
+                conn.rollback()
             
     if not frames: return pd.DataFrame()
     full_df = pd.concat(frames, ignore_index=True)
-    drop_cols = ['STATION', 'SESSION', 'station', 'session']
+    drop_cols = ['STATION', 'SESSION', 'station', 'session', 'STATION_CODE', 'STATION_COD']
     full_df = full_df.drop(columns=[c for c in drop_cols if c in full_df.columns])
     return full_df
 
