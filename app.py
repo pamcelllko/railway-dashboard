@@ -521,7 +521,7 @@ with head_col1:
 with head_col2:
     st.markdown(f'<div class="days-badge">🗓️ <b>{total_days} Days Selected</b></div>', unsafe_allow_html=True)
 
-st.markdown("<hr style='margin: 8px 0 14px 0; border:none; border-bottom:1px solid #cbd5e1;'>", unsafe_allow_html=True)
+st.markdown("<hr style='margin: 8px 0 16px 0; border:none; border-bottom:1px solid #cbd5e1;'>", unsafe_allow_html=True)
 
 # ----------------- TOP EXECUTIVE METRIC CARDS -----------------
 c1, c2, c3, c4, c5 = st.columns(5)
