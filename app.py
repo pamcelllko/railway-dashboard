@@ -34,7 +34,6 @@ engine = get_database_connection()
 
 # ----------------- DATABASE KEEP-ALIVE HEALTH CHECK -----------------
 def keep_db_alive():
-    """Executes a lightweight ping query to keep Supabase active during cron pings"""
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1;"))
@@ -90,13 +89,11 @@ def create_or_update_user(username, password, auto_approve=True):
         return False, str(e)
 
 def verify_user(username, password):
-    # 1. HARDCODED MASTER LOGINS
     if username == "computercell" and password == "pamcell2234723":
         return True, "APPROVED", "Master Admin User"
     if username == "StationEarning" and password == "pamcell2234723":
         return True, "APPROVED", "Master Admin User"
         
-    # 2. DATABASE AUTHENTICATION
     try:
         with engine.connect() as conn:
             res = conn.execute(text('SELECT password, status FROM user_auth WHERE username = :u'), {'u': username}).fetchone()
@@ -111,10 +108,10 @@ def verify_user(username, password):
     except Exception as e:
         return False, "ERROR", str(e)
 
-# ----------------- ADVANCED ROBOTO TYPOGRAPHY & UI CSS -----------------
+# ----------------- ADVANCED ROBOTO TYPOGRAPHY & CAPSULE TABS CSS -----------------
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,400&display=swap');
         
         :root {
             --bg-card: #ffffff;
@@ -258,28 +255,45 @@ st.markdown("""
             border: 1px solid #ef4444 !important;
         }
 
+        /* ----- ELEGANT CAPSULE / PILL TABS DESIGN ----- */
         .stTabs [data-baseweb="tab-list"] {
-            gap: 6px !important;
+            gap: 10px !important;
             border-bottom: none !important;
-            margin-bottom: 10px !important;
+            margin-bottom: 14px !important;
+            padding: 4px 0 !important;
         }
         .stTabs [data-baseweb="tab"] {
             font-family: 'Roboto', sans-serif !important;
-            height: 34px;
-            padding: 0 16px !important;
-            font-weight: 700 !important;
-            font-size: 0.82rem !important;
+            height: 38px !important;
+            padding: 0 20px !important;
+            font-weight: 600 !important;
+            font-size: 0.88rem !important;
             border-radius: 20px !important;
             color: var(--text-sub) !important;
             background-color: var(--bg-card) !important;
             border: 1px solid var(--border-card) !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            transition: all 0.2s ease-in-out !important;
+        }
+        .stTabs [data-baseweb="tab"]:hover {
+            border-color: #93c5fd !important;
+            color: #1d4ed8 !important;
+            background-color: #eff6ff !important;
         }
         .stTabs [aria-selected="true"] {
             background-color: #1d4ed8 !important;
             color: #ffffff !important;
             border-color: #1d4ed8 !important;
+            font-weight: 700 !important;
+            box-shadow: 0 3px 8px rgba(29, 78, 216, 0.28) !important;
+        }
+        /* Remove Default Streamlit Tab Red Line Highlight */
+        .stTabs [data-baseweb="tab-highlight-title"],
+        .stTabs [data-baseweb="tab-border"] {
+            display: none !important;
         }
 
+        /* ----- DATAFRAME STYLING ----- */
         div[data-testid="stDataFrame"] th, div[data-testid="stDataFrame"] th * {
             font-family: 'Roboto', sans-serif !important;
             text-align: center !important;
@@ -439,14 +453,14 @@ def fetch_station_details(station_code):
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_aggregated_metric(table_name, station_code, sess, months_tuple, col_name):
     if not months_tuple: return 0.0
-    m_str = "','".join([m.upper() for m in months_tuple])
+    m_str = "','".join([m.upper().strip() for m in months_tuple])
     with engine.connect() as conn:
         stn_c = safe_get_station_col(conn, table_name)
         q = f'''
             SELECT SUM("{col_name}") as val FROM "{table_name}"
             WHERE UPPER(TRIM(CAST("{stn_c}" AS TEXT))) = UPPER('{station_code.strip()}') 
               AND CAST("SESSION" AS TEXT) = '{sess}'
-              AND UPPER(TRIM("MONTH")) IN ('{m_str}')
+              AND UPPER(TRIM(CAST("MONTH" AS TEXT))) IN ('{m_str}')
         '''
         try:
             val = pd.read_sql(text(q), conn)['val'].iloc[0]
@@ -461,17 +475,19 @@ def fetch_tab_filtered_data(table_name, station_code, filters_tuple):
         stn_c = safe_get_station_col(conn, table_name)
         for sess, m_list in filters_tuple:
             if not m_list: continue
-            m_str = "','".join([m.upper() for m in m_list])
+            m_str = "','".join([m.upper().strip() for m in m_list])
             q = f'''
                 SELECT * FROM "{table_name}" 
                 WHERE UPPER(TRIM(CAST("{stn_c}" AS TEXT))) = UPPER('{station_code.strip()}') 
                   AND CAST("SESSION" AS TEXT) = '{sess}'
-                  AND UPPER(TRIM("MONTH")) IN ('{m_str}')
+                  AND UPPER(TRIM(CAST("MONTH" AS TEXT))) IN ('{m_str}')
             '''
             try:
                 df = pd.read_sql(text(q), conn)
                 if not df.empty:
                     df['Fmt Session'] = format_session(sess)
+                    if 'MONTH' in df.columns:
+                        df['MONTH'] = df['MONTH'].astype(str).str.strip()
                     frames.append(df)
             except Exception: pass
             
@@ -481,7 +497,7 @@ def fetch_tab_filtered_data(table_name, station_code, filters_tuple):
     full_df = full_df.drop(columns=[c for c in drop_cols if c in full_df.columns])
     return full_df
 
-# ----------------- CONSTANTS -----------------
+# ----------------- CONSTANTS & CHRONOLOGICAL MONTH ORDER -----------------
 MONTH_DAYS = {'Apr': 30, 'May': 31, 'Jun': 30, 'Jul': 31, 'Aug': 31, 'Sep': 30, 'Oct': 31, 'Nov': 30, 'Dec': 31, 'Jan': 31, 'Feb': 28, 'Mar': 31}
 MONTH_ORDER = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar']
 QUARTERS = {
@@ -653,6 +669,12 @@ def render_table_with_totals(df, title):
     if df.empty:
         st.info(f"No records available for {title} in selected period.")
         return
+    
+    # Financial Year Month Order Sorting
+    if 'MONTH' in df.columns:
+        df['MONTH'] = df['MONTH'].astype(str).str.strip().str.title()
+        df['MONTH'] = pd.Categorical(df['MONTH'], categories=MONTH_ORDER, ordered=True)
+        df = df.sort_values('MONTH').dropna(subset=['MONTH'])
         
     num_cols = df.select_dtypes(include=['number']).columns
     total_row = {c: df[c].sum() for c in num_cols}
@@ -696,12 +718,16 @@ with tab3:
     df_p = fetch_tab_filtered_data('reservation_org', selected_station, tuple_curr_filters)
     
     if not df_b.empty or not df_p.empty:
-        if not df_b.empty: df_b.columns = [c.upper() for c in df_b.columns]
-        if not df_p.empty: df_p.columns = [c.upper() for c in df_p.columns]
+        if not df_b.empty: 
+            df_b.columns = [c.upper().strip() for c in df_b.columns]
+            if 'MONTH' in df_b.columns: df_b['MONTH'] = df_b['MONTH'].astype(str).str.strip().str.title()
+        if not df_p.empty: 
+            df_p.columns = [c.upper().strip() for c in df_p.columns]
+            if 'MONTH' in df_p.columns: df_p['MONTH'] = df_p['MONTH'].astype(str).str.strip().str.title()
         
         m_df = pd.merge(df_b, df_p, on=['FMT SESSION', 'MONTH'], how='outer', suffixes=('_BOOKING', '_PRS'))
         combined = pd.DataFrame()
-        combined['Month'] = m_df['MONTH']
+        combined['MONTH'] = m_df['MONTH']
         
         pass_b = m_df.get('PASSENGERS_BOOKING', m_df.get('PASSENGER_BOOKING', 0)).fillna(0)
         pass_p = m_df.get('PASSENGERS_PRS', m_df.get('PASSENGER_PRS', 0)).fillna(0)
@@ -711,6 +737,9 @@ with tab3:
         combined['PRS Earning'] = m_df.get('EARNINGS', 0).fillna(0)
         combined['Total Earning'] = combined['Booking Earning'] + combined['PRS Earning']
         combined['Fmt Session'] = m_df['FMT SESSION']
+        
+        # Sort Months in Financial Sequence (Apr-Mar) & Drop None
+        combined = combined.dropna(subset=['MONTH'])
         
         render_table_with_totals(combined, "Combined Passenger")
     else:
