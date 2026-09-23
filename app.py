@@ -255,24 +255,30 @@ st.markdown("""
             border: 1px solid #ef4444 !important;
         }
 
-        /* ----- EXACT MATCH FOR 2ND IMAGE: ROUNDED CAPSULE TABS ----- */
+        /* ----- PERFECT CAPSULE / PILL TABS DESIGN WITH SAFE PADDING ----- */
         .stTabs [data-baseweb="tab-list"] {
-            gap: 16px !important;
+            gap: 12px !important;
             border-bottom: 2px solid #e2e8f0 !important;
             margin-bottom: 16px !important;
-            padding-bottom: 0px !important;
+            padding-bottom: 2px !important;
+            flex-wrap: nowrap !important;
         }
         .stTabs [data-baseweb="tab"] {
             font-family: 'Roboto', sans-serif !important;
-            height: 36px !important;
-            padding: 0 18px !important;
+            height: auto !important;
+            min-height: 38px !important;
+            padding: 6px 20px !important;
             font-weight: 500 !important;
             font-size: 0.95rem !important;
-            border-radius: 20px !important;
+            border-radius: 25px !important;
             color: #555555 !important;
             background-color: transparent !important;
             border: none !important;
             box-shadow: none !important;
+            white-space: nowrap !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
             transition: all 0.15s ease-in-out !important;
         }
         .stTabs [data-baseweb="tab"]:hover {
@@ -283,7 +289,8 @@ st.markdown("""
             background-color: #0073ea !important;
             color: #ffffff !important;
             font-weight: 700 !important;
-            border-radius: 20px !important;
+            border-radius: 25px !important;
+            padding: 6px 20px !important;
             box-shadow: 0 2px 6px rgba(0, 115, 234, 0.3) !important;
         }
         /* Red Underline Effect Below Active Tab */
@@ -670,11 +677,19 @@ def render_table_with_totals(df, title):
         st.info(f"No records available for {title} in selected period.")
         return
     
-    # Financial Year Month Order Sorting (Apr to Mar)
+    # Financial Year Month Order Sorting & Session Sorting
     if 'MONTH' in df.columns:
         df['MONTH'] = df['MONTH'].astype(str).str.strip().str.title()
         df['MONTH'] = pd.Categorical(df['MONTH'], categories=MONTH_ORDER, ordered=True)
-        df = df.sort_values('MONTH').dropna(subset=['MONTH'])
+        
+        sort_cols = []
+        if 'Fmt Session' in df.columns:
+            sort_cols.append('Fmt Session')
+        elif 'SESSION' in df.columns:
+            sort_cols.append('SESSION')
+        sort_cols.append('MONTH')
+        
+        df = df.sort_values(sort_cols).dropna(subset=['MONTH'])
         
     num_cols = df.select_dtypes(include=['number']).columns
     total_row = {c: df[c].sum() for c in num_cols}
@@ -727,6 +742,7 @@ with tab3:
         
         m_df = pd.merge(df_b, df_p, on=['FMT SESSION', 'MONTH'], how='outer', suffixes=('_BOOKING', '_PRS'))
         combined = pd.DataFrame()
+        combined['Fmt Session'] = m_df['FMT SESSION']
         combined['MONTH'] = m_df['MONTH']
         
         pass_b = m_df.get('PASSENGERS_BOOKING', m_df.get('PASSENGER_BOOKING', 0)).fillna(0)
@@ -736,10 +752,10 @@ with tab3:
         combined['Booking Earning'] = m_df.get('EARNING', 0).fillna(0)
         combined['PRS Earning'] = m_df.get('EARNINGS', 0).fillna(0)
         combined['Total Earning'] = combined['Booking Earning'] + combined['PRS Earning']
-        combined['Fmt Session'] = m_df['FMT SESSION']
         
-        # Sort Months in Financial Sequence (Apr-Mar) & Drop None
-        combined = combined.dropna(subset=['MONTH'])
+        # Season & Session-Wise Month Sorting
+        combined['MONTH'] = pd.Categorical(combined['MONTH'], categories=MONTH_ORDER, ordered=True)
+        combined = combined.sort_values(['Fmt Session', 'MONTH']).dropna(subset=['MONTH'])
         
         render_table_with_totals(combined, "Combined Passenger")
     else:
