@@ -108,7 +108,7 @@ def verify_user(username, password):
     except Exception as e:
         return False, "ERROR", str(e)
 
-# ----------------- ADVANCED ROBOTO TYPOGRAPHY & CAPSULE TABS CSS -----------------
+# ----------------- ADVANCED ROBOTO TYPOGRAPHY & EXACT CAPSULE TABS CSS -----------------
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,400&display=swap');
@@ -117,7 +117,7 @@ st.markdown("""
             --bg-card: #ffffff;
             --border-card: #e2e8f0;
             --text-main: #0f172a;
-            --text-sub: #334155;
+            --text-sub: #475569;
             --text-muted: #64748b;
             --table-header-bg: #f8fafc;
         }
@@ -255,42 +255,42 @@ st.markdown("""
             border: 1px solid #ef4444 !important;
         }
 
-        /* ----- ELEGANT CAPSULE / PILL TABS DESIGN ----- */
+        /* ----- EXACT MATCH FOR 2ND IMAGE: ROUNDED CAPSULE TABS ----- */
         .stTabs [data-baseweb="tab-list"] {
-            gap: 10px !important;
-            border-bottom: none !important;
-            margin-bottom: 14px !important;
-            padding: 4px 0 !important;
+            gap: 16px !important;
+            border-bottom: 2px solid #e2e8f0 !important;
+            margin-bottom: 16px !important;
+            padding-bottom: 0px !important;
         }
         .stTabs [data-baseweb="tab"] {
             font-family: 'Roboto', sans-serif !important;
-            height: 38px !important;
-            padding: 0 20px !important;
-            font-weight: 600 !important;
-            font-size: 0.88rem !important;
+            height: 36px !important;
+            padding: 0 18px !important;
+            font-weight: 500 !important;
+            font-size: 0.95rem !important;
             border-radius: 20px !important;
-            color: var(--text-sub) !important;
-            background-color: var(--bg-card) !important;
-            border: 1px solid var(--border-card) !important;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-            transition: all 0.2s ease-in-out !important;
+            color: #555555 !important;
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            transition: all 0.15s ease-in-out !important;
         }
         .stTabs [data-baseweb="tab"]:hover {
-            border-color: #93c5fd !important;
-            color: #1d4ed8 !important;
-            background-color: #eff6ff !important;
+            color: #0073ea !important;
+            background-color: #f1f5f9 !important;
         }
         .stTabs [aria-selected="true"] {
-            background-color: #1d4ed8 !important;
+            background-color: #0073ea !important;
             color: #ffffff !important;
-            border-color: #1d4ed8 !important;
             font-weight: 700 !important;
-            box-shadow: 0 3px 8px rgba(29, 78, 216, 0.28) !important;
+            border-radius: 20px !important;
+            box-shadow: 0 2px 6px rgba(0, 115, 234, 0.3) !important;
         }
-        /* Remove Default Streamlit Tab Red Line Highlight */
-        .stTabs [data-baseweb="tab-highlight-title"],
-        .stTabs [data-baseweb="tab-border"] {
-            display: none !important;
+        /* Red Underline Effect Below Active Tab */
+        .stTabs [data-baseweb="tab-highlight-title"] {
+            background-color: #ff0000 !important;
+            height: 3px !important;
+            border-radius: 2px !important;
         }
 
         /* ----- DATAFRAME STYLING ----- */
@@ -670,7 +670,7 @@ def render_table_with_totals(df, title):
         st.info(f"No records available for {title} in selected period.")
         return
     
-    # Financial Year Month Order Sorting
+    # Financial Year Month Order Sorting (Apr to Mar)
     if 'MONTH' in df.columns:
         df['MONTH'] = df['MONTH'].astype(str).str.strip().str.title()
         df['MONTH'] = pd.Categorical(df['MONTH'], categories=MONTH_ORDER, ordered=True)
