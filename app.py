@@ -134,7 +134,7 @@ st.markdown("""
         }
 
         .block-container { 
-            padding-top: 2.5rem !important; 
+            padding-top: 2.2rem !important; 
             padding-bottom: 1rem !important;
             padding-left: 1.2rem !important;
             padding-right: 1.2rem !important;
@@ -299,7 +299,7 @@ st.markdown("""
             border-radius: 2px !important;
         }
 
-        /* ----- FULLY CENTRALIZE DATAFRAME HEADERS & CELLS ----- */
+        /* ----- FORCE CENTRALIZE ALL DATAFRAME HEADERS & CELLS ----- */
         div[data-testid="stDataFrame"] th, 
         div[data-testid="stDataFrame"] th *,
         div[data-testid="stDataFrame"] [data-testid="stHeader"],
@@ -674,7 +674,7 @@ render_centered_metric(c5, "PARCEL FREIGHT", pr_ear_curr, pr_ear_prev, total_day
 
 st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
-# ----------------- TABS & NATIVE HIGH-PERFORMANCE DATAFRAME RENDER -----------------
+# ----------------- TABS & RENDER FUNCTION -----------------
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Booking", "PRS Org", "Combined Passenger", "Goods", "Parcel", "Reservation"
 ])
@@ -684,6 +684,9 @@ def render_table_with_totals(df, title):
         st.info(f"No records available for {title} in selected period.")
         return
     
+    # Ensure no duplicate columns
+    df = df.loc[:, ~df.columns.duplicated()].copy()
+
     # Financial Year Month Order Sorting & Session Sorting
     if 'MONTH' in df.columns:
         df['MONTH'] = df['MONTH'].astype(str).str.strip().str.title()
@@ -711,12 +714,12 @@ def render_table_with_totals(df, title):
     for col in df_totals.columns:
         col_u = col.upper()
         if any(kw in col_u for kw in ['PASSENGER', 'REQUISITION', 'SLIP', 'COUNT', 'TICKET', 'TONNAGE', 'WAGON', 'RAKE']):
-            df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notna(x) else "")
+            df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notna(x) else "0")
         elif any(kw in col_u for kw in ['EARNING', 'FREIGHT', 'AMOUNT', 'CASH', 'NET']):
-            df_totals[col] = df_totals[col].apply(lambda x: format_inr(x) if pd.notna(x) else "")
+            df_totals[col] = df_totals[col].apply(lambda x: format_inr(x) if pd.notna(x) else "0")
         else:
             if col in num_cols:
-                df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notna(x) else "")
+                df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notna(x) else "0")
         column_config[col] = st.column_config.TextColumn(col, alignment="center")
 
     st.dataframe(
@@ -792,18 +795,18 @@ with tab5:
 with tab6:
     df_res = fetch_tab_filtered_data('reservation', selected_station, tuple_curr_filters)
     if not df_res.empty:
-        # Standardize column mapping to avoid duplicate columns
-        new_cols = []
+        # Cleanly rename NET_CASH to Earning without duplicate column conflicts
+        col_rename_map = {}
+        cols_to_drop = []
         for col in df_res.columns:
             c_clean = str(col).upper().replace('_', '').replace(' ', '').strip()
-            if c_clean in ['NETCASH', 'NETCASHAMOUNT', 'NETCASHEARNING']:
-                new_cols.append('Earning')
+            if c_clean in ['NETCASH', 'NETCASHAMOUNT', 'NETCASHEARNING', 'EARNINGS']:
+                col_rename_map[col] = 'Earning'
             elif c_clean in ['ROPD', 'ROPDCASH']:
-                new_cols.append('DROP_ME')
-            else:
-                new_cols.append(col)
-        df_res.columns = new_cols
-        if 'DROP_ME' in df_res.columns:
-            df_res = df_res.drop(columns=['DROP_ME'])
+                cols_to_drop.append(col)
+        
+        df_res = df_res.rename(columns=col_rename_map)
+        if cols_to_drop:
+            df_res = df_res.drop(columns=[c for c in cols_to_drop if c in df_res.columns])
             
     render_table_with_totals(df_res, "Reservation")
