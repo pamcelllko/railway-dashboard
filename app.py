@@ -299,30 +299,24 @@ st.markdown("""
             border-radius: 2px !important;
         }
 
-        /* ----- FORCE CENTRALIZE ALL DATAFRAME HEADERS & CELLS ----- */
-        div[data-testid="stDataFrame"] th, 
-        div[data-testid="stDataFrame"] th *,
-        div[data-testid="stDataFrame"] [data-testid="stHeader"],
-        div[data-testid="stDataFrame"] [role="columnheader"],
-        div[data-testid="stDataFrame"] [role="columnheader"] * {
-            font-family: 'Roboto', sans-serif !important;
-            text-align: center !important;
-            justify-content: center !important;
-            align-items: center !important;
-            background-color: var(--table-header-bg) !important;
-            color: var(--text-main) !important;
-            font-weight: 700 !important;
-            font-size: 0.82rem !important;
+        /* ----- DEEP STYLING FOR DATAFRAME HEADER CENTERING ----- */
+        div[data-testid="stDataFrame"] iframe,
+        div[data-testid="stDataFrame"] canvas {
+            display: block !important;
+            margin: 0 auto !important;
         }
-        div[data-testid="stDataFrame"] td, 
-        div[data-testid="stDataFrame"] td *,
-        div[data-testid="stDataFrame"] [role="gridcell"] {
+
+        div[data-testid="stDataFrame"] div[role="columnheader"] span,
+        div[data-testid="stDataFrame"] div[role="columnheader"] div,
+        div[data-testid="stDataFrame"] [data-testid="stHeader"] *,
+        div[data-testid="stDataFrame"] th * {
             font-family: 'Roboto', sans-serif !important;
             text-align: center !important;
             justify-content: center !important;
             align-items: center !important;
-            font-size: 0.82rem !important;
-            color: var(--text-main) !important;
+            display: flex !important;
+            width: 100% !important;
+            font-weight: 700 !important;
         }
     </style>
 """, unsafe_allow_html=True)
