@@ -119,7 +119,7 @@ st.markdown("""
             --text-main: #0f172a;
             --text-sub: #475569;
             --text-muted: #64748b;
-            --table-header-bg: #f8fafc;
+            --table-header-bg: #f1f5f9;
         }
 
         @media (prefers-color-scheme: dark) {
@@ -134,7 +134,7 @@ st.markdown("""
         }
 
         .block-container { 
-            padding-top: 2.2rem !important; 
+            padding-top: 2.8rem !important; 
             padding-bottom: 1rem !important;
             padding-left: 1.2rem !important;
             padding-right: 1.2rem !important;
@@ -255,11 +255,11 @@ st.markdown("""
             border: 1px solid #ef4444 !important;
         }
 
-        /* ----- CAPSULE / PILL TABS DESIGN ----- */
+        /* ----- CAPSULE / PILL TABS DESIGN WITH SAFE PADDING ----- */
         .stTabs [data-baseweb="tab-list"] {
             gap: 12px !important;
             border-bottom: 2px solid #e2e8f0 !important;
-            margin-bottom: 12px !important;
+            margin-bottom: 16px !important;
             padding-bottom: 2px !important;
             flex-wrap: nowrap !important;
         }
@@ -293,30 +293,52 @@ st.markdown("""
             padding: 6px 20px !important;
             box-shadow: 0 2px 6px rgba(0, 115, 234, 0.3) !important;
         }
+        /* Red Underline Effect Below Active Tab */
         .stTabs [data-baseweb="tab-highlight-title"] {
             background-color: #ff0000 !important;
             height: 3px !important;
             border-radius: 2px !important;
         }
 
-        /* ----- DEEP STYLING FOR DATAFRAME HEADER CENTERING ----- */
-        div[data-testid="stDataFrame"] iframe,
-        div[data-testid="stDataFrame"] canvas {
-            display: block !important;
-            margin: 0 auto !important;
-        }
-
-        div[data-testid="stDataFrame"] div[role="columnheader"] span,
-        div[data-testid="stDataFrame"] div[role="columnheader"] div,
-        div[data-testid="stDataFrame"] [data-testid="stHeader"] *,
-        div[data-testid="stDataFrame"] th * {
+        /* ----- CUSTOM HTML TABLE CENTRALIZE CSS ----- */
+        .custom-dashboard-table {
+            width: 100%;
+            border-collapse: collapse;
             font-family: 'Roboto', sans-serif !important;
-            text-align: center !important;
-            justify-content: center !important;
-            align-items: center !important;
-            display: flex !important;
-            width: 100% !important;
+            font-size: 0.85rem;
+            margin-top: 8px;
+            background-color: var(--bg-card);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-card);
+        }
+        .custom-dashboard-table th {
+            background-color: #f1f5f9 !important;
+            color: #475569 !important;
             font-weight: 700 !important;
+            text-align: center !important;
+            vertical-align: middle !important;
+            padding: 10px 14px !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+        .custom-dashboard-table td {
+            text-align: center !important;
+            vertical-align: middle !important;
+            padding: 9px 12px !important;
+            border: 1px solid #e2e8f0 !important;
+            color: var(--text-main) !important;
+        }
+        .custom-dashboard-table tr:hover {
+            background-color: #f8fafc;
+        }
+        .custom-dashboard-table tr.total-row {
+            font-weight: 800 !important;
+            background-color: #f8fafc !important;
+        }
+        .custom-dashboard-table tr.total-row td {
+            font-weight: 800 !important;
+            border-top: 2px solid #cbd5e1 !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -668,7 +690,7 @@ render_centered_metric(c5, "PARCEL FREIGHT", pr_ear_curr, pr_ear_prev, total_day
 
 st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
-# ----------------- TABS & RENDER FUNCTION -----------------
+# ----------------- TABS & CUSTOM CENTERED TABLE RENDER -----------------
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Booking", "PRS Org", "Combined Passenger", "Goods", "Parcel", "Reservation"
 ])
@@ -678,9 +700,6 @@ def render_table_with_totals(df, title):
         st.info(f"No records available for {title} in selected period.")
         return
     
-    # Ensure no duplicate columns
-    df = df.loc[:, ~df.columns.duplicated()].copy()
-
     # Financial Year Month Order Sorting & Session Sorting
     if 'MONTH' in df.columns:
         df['MONTH'] = df['MONTH'].astype(str).str.strip().str.title()
@@ -704,25 +723,34 @@ def render_table_with_totals(df, title):
     df_totals = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
     df_totals.columns = [str(c).replace('_', ' ').title() for c in df_totals.columns]
 
-    column_config = {}
-    for col in df_totals.columns:
+    # Format values for HTML rendering without decimals
+    formatted_df = df_totals.copy()
+    for col in formatted_df.columns:
         col_u = col.upper()
         if any(kw in col_u for kw in ['PASSENGER', 'REQUISITION', 'SLIP', 'COUNT', 'TICKET', 'TONNAGE', 'WAGON', 'RAKE']):
-            df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notna(x) else "0")
+            formatted_df[col] = formatted_df[col].apply(lambda x: format_plain_number(x) if pd.notna(x) else "0")
         elif any(kw in col_u for kw in ['EARNING', 'FREIGHT', 'AMOUNT', 'CASH', 'NET']):
-            df_totals[col] = df_totals[col].apply(lambda x: format_inr(x) if pd.notna(x) else "0")
+            formatted_df[col] = formatted_df[col].apply(lambda x: format_inr(x) if pd.notna(x) else "0")
         else:
             if col in num_cols:
-                df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notna(x) else "0")
-        column_config[col] = st.column_config.TextColumn(col, alignment="center")
+                formatted_df[col] = formatted_df[col].apply(lambda x: format_plain_number(x) if pd.notna(x) else "0")
 
-    st.dataframe(
-        df_totals, 
-        use_container_width=True, 
-        hide_index=True,
-        column_config=column_config,
-        height=min(500, (len(df_totals) + 1) * 36)
-    )
+    # Build HTML Table with Guaranteed 100% Center Align Headers & Body Cells
+    html_code = '<table class="custom-dashboard-table"><thead><tr>'
+    for col in formatted_df.columns:
+        html_code += f'<th>{col}</th>'
+    html_code += '</tr></thead><tbody>'
+
+    for i, row in formatted_df.iterrows():
+        is_last = (i == len(formatted_df) - 1)
+        row_class = ' class="total-row"' if is_last else ''
+        html_code += f'<tr{row_class}>'
+        for val in row:
+            html_code += f'<td>{val}</td>'
+        html_code += '</tr>'
+    
+    html_code += '</tbody></table>'
+    st.markdown(html_code, unsafe_allow_html=True)
 
 tuple_curr_filters = tuple(query_filters_curr)
 
