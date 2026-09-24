@@ -523,7 +523,7 @@ def fetch_tab_filtered_data(table_name, station_code, filters_tuple):
             
     if not frames: return pd.DataFrame()
     full_df = pd.concat(frames, ignore_index=True)
-    drop_cols = ['STATION', 'SESSION', 'station', 'session', 'STATION_CODE', 'STATION_COD']
+    drop_cols = ['STATION', 'SESSION', 'station', 'session', 'STATION_CODE', 'STATION_COD', 'ROPD', 'ropd']
     full_df = full_df.drop(columns=[c for c in drop_cols if c in full_df.columns])
     return full_df
 
@@ -727,13 +727,25 @@ def render_table_with_totals(df, title):
     formatted_df = df_totals.copy()
     for col in formatted_df.columns:
         col_u = col.upper()
-        if 'PASSENGER' in col_u:
+        if any(kw in col_u for kw in ['PASSENGER', 'REQUISITION', 'SLIP', 'COUNT', 'TICKET']):
             formatted_df[col] = formatted_df[col].apply(lambda x: format_plain_number(x) if pd.notnull(x) else "")
-        elif any(kw in col_u for kw in ['EARNING', 'FREIGHT', 'AMOUNT', 'CASH']):
+        elif any(kw in col_u for kw in ['EARNING', 'FREIGHT', 'AMOUNT', 'CASH', 'NET']):
             formatted_df[col] = formatted_df[col].apply(lambda x: format_inr(x) if pd.notnull(x) else "")
         else:
             if col in num_cols:
                 formatted_df[col] = formatted_df[col].apply(lambda x: format_plain_number(x) if pd.notnull(x) else "")
+
+    # Top Toolbar with Download CSV Button
+    col_t1, col_t2 = st.columns([5, 1])
+    with col_t2:
+        csv_data = df_totals.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Download CSV",
+            data=csv_data,
+            file_name=f"{selected_station}_{title}_Report.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
 
     # Build HTML Table with Guaranteed 100% Center Align Headers & Body Cells
     html_code = '<table class="custom-dashboard-table"><thead><tr>'
@@ -749,7 +761,7 @@ def render_table_with_totals(df, title):
             html_code += f'<td>{val}</td>'
         html_code += '</tr>'
     
-    html_code += '</tbody></table>'
+    html_code += '</tbody>mtable>'
     st.markdown(html_code, unsafe_allow_html=True)
 
 tuple_curr_filters = tuple(query_filters_curr)
@@ -816,6 +828,15 @@ with tab5:
 
 with tab6:
     df_res = fetch_tab_filtered_data('reservation', selected_station, tuple_curr_filters)
-    if 'NET_CASH' in df_res.columns:
-        df_res = df_res.rename(columns={'NET_CASH': 'EARNING (NET_CASH)'})
+    if not df_res.empty:
+        # Net Cash to Earning mapping & ROPD Removal
+        if 'NET_CASH' in df_res.columns:
+            df_res['Earning'] = df_res['NET_CASH']
+            df_res = df_res.drop(columns=['NET_CASH'])
+        elif 'net_cash' in df_res.columns:
+            df_res['Earning'] = df_res['net_cash']
+            df_res = df_res.drop(columns=['net_cash'])
+            
+        drop_unwanted = ['ROPD', 'ropd', 'Ropd']
+        df_res = df_res.drop(columns=[c for c in drop_unwanted if c in df_res.columns])
     render_table_with_totals(df_res, "Reservation")
