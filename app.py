@@ -300,17 +300,21 @@ st.markdown("""
             border-radius: 2px !important;
         }
 
-        /* ----- DATAFRAME STYLING ----- */
-        div[data-testid="stDataFrame"] th, div[data-testid="stDataFrame"] th * {
+        /* ----- FULLY CENTRALIZE DATAFRAME HEADERS & CELLS ----- */
+        div[data-testid="stDataFrame"] th, 
+        div[data-testid="stDataFrame"] th *,
+        div[data-testid="stDataFrame"] [data-testid="stHeader"] {
             font-family: 'Roboto', sans-serif !important;
             text-align: center !important;
             justify-content: center !important;
+            align-items: center !important;
             background-color: var(--table-header-bg) !important;
             color: var(--text-main) !important;
             font-weight: 700 !important;
             font-size: 0.82rem !important;
         }
-        div[data-testid="stDataFrame"] td, div[data-testid="stDataFrame"] td * {
+        div[data-testid="stDataFrame"] td, 
+        div[data-testid="stDataFrame"] td * {
             font-family: 'Roboto', sans-serif !important;
             text-align: center !important;
             justify-content: center !important;
