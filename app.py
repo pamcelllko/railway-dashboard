@@ -255,7 +255,7 @@ st.markdown("""
             border: 1px solid #ef4444 !important;
         }
 
-        /* ----- PERFECT CAPSULE / PILL TABS DESIGN WITH SAFE PADDING ----- */
+        /* ----- CAPSULE / PILL TABS DESIGN WITH SAFE PADDING ----- */
         .stTabs [data-baseweb="tab-list"] {
             gap: 12px !important;
             border-bottom: 2px solid #e2e8f0 !important;
@@ -742,16 +742,31 @@ with tab3:
         
         m_df = pd.merge(df_b, df_p, on=['FMT SESSION', 'MONTH'], how='outer', suffixes=('_BOOKING', '_PRS'))
         combined = pd.DataFrame()
+        
+        # 1. Session & Month Columns
         combined['Fmt Session'] = m_df['FMT SESSION']
         combined['MONTH'] = m_df['MONTH']
         
+        # 2. Passengers Bifurcation
         pass_b = m_df.get('PASSENGERS_BOOKING', m_df.get('PASSENGER_BOOKING', 0)).fillna(0)
         pass_p = m_df.get('PASSENGERS_PRS', m_df.get('PASSENGER_PRS', 0)).fillna(0)
+        combined['Booking Passengers'] = pass_b
+        combined['Prs Passenger'] = pass_p
+        combined['Total Passengers'] = pass_b + pass_p
         
-        combined['Passengers'] = pass_b + pass_p
-        combined['Booking Earning'] = m_df.get('EARNING', 0).fillna(0)
-        combined['PRS Earning'] = m_df.get('EARNINGS', 0).fillna(0)
-        combined['Total Earning'] = combined['Booking Earning'] + combined['PRS Earning']
+        # 3. Earnings Bifurcation
+        earn_b = m_df.get('EARNING', 0).fillna(0)
+        earn_p = m_df.get('EARNINGS', 0).fillna(0)
+        combined['Booking Earning'] = earn_b
+        combined['Prs Earning'] = earn_p
+        combined['Total Earning'] = earn_b + earn_p
+        
+        # Reorder Exact Columns Requested
+        desired_cols = [
+            'Fmt Session', 'MONTH', 'Booking Passengers', 'Prs Passenger', 
+            'Total Passengers', 'Booking Earning', 'Prs Earning', 'Total Earning'
+        ]
+        combined = combined[desired_cols]
         
         # Season & Session-Wise Month Sorting
         combined['MONTH'] = pd.Categorical(combined['MONTH'], categories=MONTH_ORDER, ordered=True)
