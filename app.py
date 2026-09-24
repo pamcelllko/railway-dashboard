@@ -300,24 +300,30 @@ st.markdown("""
             border-radius: 2px !important;
         }
 
-        /* ----- FULLY CENTRALIZE DATAFRAME HEADERS & CELLS ----- */
+        /* ----- FORCE CENTRALIZE DATAFRAME HEADERS & CELLS DEEP SELECTORS ----- */
         div[data-testid="stDataFrame"] th, 
         div[data-testid="stDataFrame"] th *,
-        div[data-testid="stDataFrame"] [data-testid="stHeader"] {
+        div[data-testid="stDataFrame"] [data-testid="stHeader"],
+        div[data-testid="stDataFrame"] [role="columnheader"],
+        div[data-testid="stDataFrame"] [role="columnheader"] * {
             font-family: 'Roboto', sans-serif !important;
             text-align: center !important;
             justify-content: center !important;
             align-items: center !important;
+            float: none !important;
+            margin: 0 auto !important;
             background-color: var(--table-header-bg) !important;
             color: var(--text-main) !important;
             font-weight: 700 !important;
             font-size: 0.82rem !important;
         }
         div[data-testid="stDataFrame"] td, 
-        div[data-testid="stDataFrame"] td * {
+        div[data-testid="stDataFrame"] td *,
+        div[data-testid="stDataFrame"] [role="gridcell"] {
             font-family: 'Roboto', sans-serif !important;
             text-align: center !important;
             justify-content: center !important;
+            align-items: center !important;
             font-size: 0.82rem !important;
             color: var(--text-main) !important;
         }
