@@ -711,12 +711,12 @@ def render_table_with_totals(df, title):
     for col in df_totals.columns:
         col_u = col.upper()
         if any(kw in col_u for kw in ['PASSENGER', 'REQUISITION', 'SLIP', 'COUNT', 'TICKET', 'TONNAGE', 'WAGON', 'RAKE']):
-            df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notnull(x) else "")
+            df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notna(x) else "")
         elif any(kw in col_u for kw in ['EARNING', 'FREIGHT', 'AMOUNT', 'CASH', 'NET']):
-            df_totals[col] = df_totals[col].apply(lambda x: format_inr(x) if pd.notnull(x) else "")
+            df_totals[col] = df_totals[col].apply(lambda x: format_inr(x) if pd.notna(x) else "")
         else:
             if col in num_cols:
-                df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notnull(x) else "")
+                df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notna(x) else "")
         column_config[col] = st.column_config.TextColumn(col, alignment="center")
 
     st.dataframe(
@@ -792,21 +792,18 @@ with tab5:
 with tab6:
     df_res = fetch_tab_filtered_data('reservation', selected_station, tuple_curr_filters)
     if not df_res.empty:
-        # Check all possible column variations for NET_CASH / EARNING
-        net_cash_col = None
-        for c in df_res.columns:
-            c_clean = str(c).upper().replace('_', '').replace(' ', '').strip()
+        # Standardize column mapping to avoid duplicate columns
+        new_cols = []
+        for col in df_res.columns:
+            c_clean = str(col).upper().replace('_', '').replace(' ', '').strip()
             if c_clean in ['NETCASH', 'NETCASHAMOUNT', 'NETCASHEARNING']:
-                net_cash_col = c
-                break
-        
-        if net_cash_col:
-            df_res['Earning'] = df_res[net_cash_col]
-            df_res = df_res.drop(columns=[net_cash_col])
-        elif 'EARNINGS' in df_res.columns:
-            df_res['Earning'] = df_res['EARNINGS']
-            df_res = df_res.drop(columns=['EARNINGS'])
+                new_cols.append('Earning')
+            elif c_clean in ['ROPD', 'ROPDCASH']:
+                new_cols.append('DROP_ME')
+            else:
+                new_cols.append(col)
+        df_res.columns = new_cols
+        if 'DROP_ME' in df_res.columns:
+            df_res = df_res.drop(columns=['DROP_ME'])
             
-        drop_unwanted = ['ROPD', 'ropd', 'Ropd']
-        df_res = df_res.drop(columns=[c for c in drop_unwanted if c in df_res.columns])
     render_table_with_totals(df_res, "Reservation")
