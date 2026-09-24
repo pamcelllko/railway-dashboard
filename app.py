@@ -119,7 +119,7 @@ st.markdown("""
             --text-main: #0f172a;
             --text-sub: #475569;
             --text-muted: #64748b;
-            --table-header-bg: #f1f5f9;
+            --table-header-bg: #f8fafc;
         }
 
         @media (prefers-color-scheme: dark) {
@@ -134,7 +134,7 @@ st.markdown("""
         }
 
         .block-container { 
-            padding-top: 2.8rem !important; 
+            padding-top: 2.5rem !important; 
             padding-bottom: 1rem !important;
             padding-left: 1.2rem !important;
             padding-right: 1.2rem !important;
@@ -255,11 +255,11 @@ st.markdown("""
             border: 1px solid #ef4444 !important;
         }
 
-        /* ----- CAPSULE / PILL TABS DESIGN WITH SAFE PADDING ----- */
+        /* ----- CAPSULE / PILL TABS DESIGN ----- */
         .stTabs [data-baseweb="tab-list"] {
             gap: 12px !important;
             border-bottom: 2px solid #e2e8f0 !important;
-            margin-bottom: 16px !important;
+            margin-bottom: 12px !important;
             padding-bottom: 2px !important;
             flex-wrap: nowrap !important;
         }
@@ -293,52 +293,36 @@ st.markdown("""
             padding: 6px 20px !important;
             box-shadow: 0 2px 6px rgba(0, 115, 234, 0.3) !important;
         }
-        /* Red Underline Effect Below Active Tab */
         .stTabs [data-baseweb="tab-highlight-title"] {
             background-color: #ff0000 !important;
             height: 3px !important;
             border-radius: 2px !important;
         }
 
-        /* ----- CUSTOM HTML TABLE CENTRALIZE CSS ----- */
-        .custom-dashboard-table {
-            width: 100%;
-            border-collapse: collapse;
+        /* ----- FULLY CENTRALIZE DATAFRAME HEADERS & CELLS ----- */
+        div[data-testid="stDataFrame"] th, 
+        div[data-testid="stDataFrame"] th *,
+        div[data-testid="stDataFrame"] [data-testid="stHeader"],
+        div[data-testid="stDataFrame"] [role="columnheader"],
+        div[data-testid="stDataFrame"] [role="columnheader"] * {
             font-family: 'Roboto', sans-serif !important;
-            font-size: 0.85rem;
-            margin-top: 8px;
-            background-color: var(--bg-card);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid var(--border-card);
-        }
-        .custom-dashboard-table th {
-            background-color: #f1f5f9 !important;
-            color: #475569 !important;
-            font-weight: 700 !important;
             text-align: center !important;
-            vertical-align: middle !important;
-            padding: 10px 14px !important;
-            border: 1px solid #e2e8f0 !important;
-        }
-        .custom-dashboard-table td {
-            text-align: center !important;
-            vertical-align: middle !important;
-            padding: 9px 12px !important;
-            border: 1px solid #e2e8f0 !important;
+            justify-content: center !important;
+            align-items: center !important;
+            background-color: var(--table-header-bg) !important;
             color: var(--text-main) !important;
+            font-weight: 700 !important;
+            font-size: 0.82rem !important;
         }
-        .custom-dashboard-table tr:hover {
-            background-color: #f8fafc;
-        }
-        .custom-dashboard-table tr.total-row {
-            font-weight: 800 !important;
-            background-color: #f8fafc !important;
-        }
-        .custom-dashboard-table tr.total-row td {
-            font-weight: 800 !important;
-            border-top: 2px solid #cbd5e1 !important;
+        div[data-testid="stDataFrame"] td, 
+        div[data-testid="stDataFrame"] td *,
+        div[data-testid="stDataFrame"] [role="gridcell"] {
+            font-family: 'Roboto', sans-serif !important;
+            text-align: center !important;
+            justify-content: center !important;
+            align-items: center !important;
+            font-size: 0.82rem !important;
+            color: var(--text-main) !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -523,7 +507,7 @@ def fetch_tab_filtered_data(table_name, station_code, filters_tuple):
             
     if not frames: return pd.DataFrame()
     full_df = pd.concat(frames, ignore_index=True)
-    drop_cols = ['STATION', 'SESSION', 'station', 'session', 'STATION_CODE', 'STATION_COD', 'ROPD', 'ropd']
+    drop_cols = ['STATION', 'SESSION', 'station', 'session', 'STATION_CODE', 'STATION_COD', 'ROPD', 'ropd', 'Ropd']
     full_df = full_df.drop(columns=[c for c in drop_cols if c in full_df.columns])
     return full_df
 
@@ -690,7 +674,7 @@ render_centered_metric(c5, "PARCEL FREIGHT", pr_ear_curr, pr_ear_prev, total_day
 
 st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
-# ----------------- TABS & CUSTOM CENTERED TABLE RENDER -----------------
+# ----------------- TABS & NATIVE HIGH-PERFORMANCE DATAFRAME RENDER -----------------
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Booking", "PRS Org", "Combined Passenger", "Goods", "Parcel", "Reservation"
 ])
@@ -723,46 +707,25 @@ def render_table_with_totals(df, title):
     df_totals = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
     df_totals.columns = [str(c).replace('_', ' ').title() for c in df_totals.columns]
 
-    # Format values for HTML rendering
-    formatted_df = df_totals.copy()
-    for col in formatted_df.columns:
+    column_config = {}
+    for col in df_totals.columns:
         col_u = col.upper()
-        if any(kw in col_u for kw in ['PASSENGER', 'REQUISITION', 'SLIP', 'COUNT', 'TICKET']):
-            formatted_df[col] = formatted_df[col].apply(lambda x: format_plain_number(x) if pd.notnull(x) else "")
+        if any(kw in col_u for kw in ['PASSENGER', 'REQUISITION', 'SLIP', 'COUNT', 'TICKET', 'TONNAGE', 'WAGON', 'RAKE']):
+            df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notnull(x) else "")
         elif any(kw in col_u for kw in ['EARNING', 'FREIGHT', 'AMOUNT', 'CASH', 'NET']):
-            formatted_df[col] = formatted_df[col].apply(lambda x: format_inr(x) if pd.notnull(x) else "")
+            df_totals[col] = df_totals[col].apply(lambda x: format_inr(x) if pd.notnull(x) else "")
         else:
             if col in num_cols:
-                formatted_df[col] = formatted_df[col].apply(lambda x: format_plain_number(x) if pd.notnull(x) else "")
+                df_totals[col] = df_totals[col].apply(lambda x: format_plain_number(x) if pd.notnull(x) else "")
+        column_config[col] = st.column_config.TextColumn(col, alignment="center")
 
-    # Top Toolbar with Download CSV Button
-    col_t1, col_t2 = st.columns([5, 1])
-    with col_t2:
-        csv_data = df_totals.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Download CSV",
-            data=csv_data,
-            file_name=f"{selected_station}_{title}_Report.csv",
-            mime="text/csv",
-            use_container_width=True
-        )
-
-    # Build HTML Table with Guaranteed 100% Center Align Headers & Body Cells
-    html_code = '<table class="custom-dashboard-table"><thead><tr>'
-    for col in formatted_df.columns:
-        html_code += f'<th>{col}</th>'
-    html_code += '</tr></thead><tbody>'
-
-    for i, row in formatted_df.iterrows():
-        is_last = (i == len(formatted_df) - 1)
-        row_class = ' class="total-row"' if is_last else ''
-        html_code += f'<tr{row_class}>'
-        for val in row:
-            html_code += f'<td>{val}</td>'
-        html_code += '</tr>'
-    
-    html_code += '</tbody>mtable>'
-    st.markdown(html_code, unsafe_allow_html=True)
+    st.dataframe(
+        df_totals, 
+        use_container_width=True, 
+        hide_index=True,
+        column_config=column_config,
+        height=min(500, (len(df_totals) + 1) * 36)
+    )
 
 tuple_curr_filters = tuple(query_filters_curr)
 
@@ -829,13 +792,20 @@ with tab5:
 with tab6:
     df_res = fetch_tab_filtered_data('reservation', selected_station, tuple_curr_filters)
     if not df_res.empty:
-        # Net Cash to Earning mapping & ROPD Removal
-        if 'NET_CASH' in df_res.columns:
-            df_res['Earning'] = df_res['NET_CASH']
-            df_res = df_res.drop(columns=['NET_CASH'])
-        elif 'net_cash' in df_res.columns:
-            df_res['Earning'] = df_res['net_cash']
-            df_res = df_res.drop(columns=['net_cash'])
+        # Check all possible column variations for NET_CASH / EARNING
+        net_cash_col = None
+        for c in df_res.columns:
+            c_clean = str(c).upper().replace('_', '').replace(' ', '').strip()
+            if c_clean in ['NETCASH', 'NETCASHAMOUNT', 'NETCASHEARNING']:
+                net_cash_col = c
+                break
+        
+        if net_cash_col:
+            df_res['Earning'] = df_res[net_cash_col]
+            df_res = df_res.drop(columns=[net_cash_col])
+        elif 'EARNINGS' in df_res.columns:
+            df_res['Earning'] = df_res['EARNINGS']
+            df_res = df_res.drop(columns=['EARNINGS'])
             
         drop_unwanted = ['ROPD', 'ropd', 'Ropd']
         df_res = df_res.drop(columns=[c for c in drop_unwanted if c in df_res.columns])
