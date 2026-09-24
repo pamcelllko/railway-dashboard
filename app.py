@@ -795,17 +795,12 @@ with tab5:
 with tab6:
     df_res = fetch_tab_filtered_data('reservation', selected_station, tuple_curr_filters)
     if not df_res.empty:
-        # Cleanly rename NET_CASH to Earning without duplicate column conflicts
-        col_rename_map = {}
+        # Hide/Drop blank 'Earning' / 'EARNING' or 'ROPD' columns, keep Net Cash intact
         cols_to_drop = []
         for col in df_res.columns:
             c_clean = str(col).upper().replace('_', '').replace(' ', '').strip()
-            if c_clean in ['NETCASH', 'NETCASHAMOUNT', 'NETCASHEARNING', 'EARNINGS']:
-                col_rename_map[col] = 'Earning'
-            elif c_clean in ['ROPD', 'ROPDCASH']:
+            if c_clean in ['EARNING', 'EARNINGS', 'ROPD', 'ROPDCASH']:
                 cols_to_drop.append(col)
-        
-        df_res = df_res.rename(columns=col_rename_map)
         if cols_to_drop:
             df_res = df_res.drop(columns=[c for c in cols_to_drop if c in df_res.columns])
             
