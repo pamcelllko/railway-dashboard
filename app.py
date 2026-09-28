@@ -16,7 +16,7 @@ st.set_page_config(
 )
 
 # ----------------- SECURE DATABASE CREDENTIALS -----------------
-SUPABASE_URL = st.secrets.get("SUPABASE_URL", "postgresql+psycopg2://postgres.ggrpypensvabbvpyzqbx:2234723pamcell@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require").strip()
+SUPABASE_URL = "postgresql+psycopg2://postgres.ggrpypensvabbvpyzqbx:2234723pamcell@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 ADMIN_NAME = "Mohammed Rafik"
 ADMIN_EMAIL = "adilrafeeque@gmail.com"
 
