@@ -6,6 +6,7 @@ import smtplib
 from email.mime.text import MIMEText
 import base64
 import os
+from datetime import datetime
 
 # ----------------- PAGE CONFIGURATION -----------------
 st.set_page_config(
@@ -16,7 +17,7 @@ st.set_page_config(
 )
 
 # ----------------- SECURE DATABASE CREDENTIALS -----------------
-SUPABASE_URL = "postgresql+psycopg2://postgres.ggrpypensvabbvpyzqbx:2234723pamcell@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
+SUPABASE_URL = st.secrets.get("SUPABASE_URL", "postgresql+psycopg2://postgres.ggrpypensvabbvpyzqbx:2234723pamcell@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require").strip()
 ADMIN_NAME = "Mohammed Rafik"
 ADMIN_EMAIL = "adilrafeeque@gmail.com"
 
@@ -257,19 +258,20 @@ st.markdown("""
 
         /* ----- CAPSULE / PILL TABS DESIGN WITH SAFE PADDING ----- */
         .stTabs [data-baseweb="tab-list"] {
-            gap: 12px !important;
+            gap: 10px !important;
             border-bottom: 2px solid #e2e8f0 !important;
             margin-bottom: 16px !important;
             padding-bottom: 2px !important;
             flex-wrap: nowrap !important;
+            overflow-x: auto !important;
         }
         .stTabs [data-baseweb="tab"] {
             font-family: 'Roboto', sans-serif !important;
             height: auto !important;
             min-height: 38px !important;
-            padding: 6px 20px !important;
+            padding: 6px 18px !important;
             font-weight: 500 !important;
-            font-size: 0.95rem !important;
+            font-size: 0.92rem !important;
             border-radius: 25px !important;
             color: #555555 !important;
             background-color: transparent !important;
@@ -290,7 +292,7 @@ st.markdown("""
             color: #ffffff !important;
             font-weight: 700 !important;
             border-radius: 25px !important;
-            padding: 6px 20px !important;
+            padding: 6px 18px !important;
             box-shadow: 0 2px 6px rgba(0, 115, 234, 0.3) !important;
         }
         /* Red Underline Effect Below Active Tab */
@@ -339,6 +341,17 @@ st.markdown("""
         .custom-dashboard-table tr.total-row td {
             font-weight: 800 !important;
             border-top: 2px solid #cbd5e1 !important;
+        }
+        .period-info-box {
+            background-color: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-align: center;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -499,6 +512,79 @@ def fetch_aggregated_metric(table_name, station_code, sess, months_tuple, col_na
             return 0.0
 
 @st.cache_data(ttl=3600, show_spinner=False)
+def fetch_multi_station_summary(stations_tuple, filters_tuple):
+    if not stations_tuple or not filters_tuple:
+        return pd.DataFrame()
+    
+    stn_str = "','".join([s.strip().upper() for s in stations_tuple])
+    b_frames = []
+    p_frames = []
+    
+    with engine.connect() as conn:
+        b_stn_c = safe_get_station_col(conn, 'booking')
+        p_stn_c = safe_get_station_col(conn, 'reservation_org')
+        
+        for sess, m_list in filters_tuple:
+            if not m_list: continue
+            m_str = "','".join([m.upper().strip() for m in m_list])
+            
+            qb = f'''
+                SELECT CAST("{b_stn_c}" AS TEXT) AS stn,
+                       SUM("PASSENGERS") AS b_pass,
+                       SUM("EARNING") AS b_earn
+                FROM booking
+                WHERE UPPER(TRIM(CAST("{b_stn_c}" AS TEXT))) IN ('{stn_str}')
+                  AND CAST("SESSION" AS TEXT) = '{sess}'
+                  AND UPPER(TRIM(CAST("MONTH" AS TEXT))) IN ('{m_str}')
+                GROUP BY 1
+            '''
+            qp = f'''
+                SELECT CAST("{p_stn_c}" AS TEXT) AS stn,
+                       SUM("PASSENGERS") AS p_pass,
+                       SUM("EARNINGS") AS p_earn
+                FROM reservation_org
+                WHERE UPPER(TRIM(CAST("{p_stn_c}" AS TEXT))) IN ('{stn_str}')
+                  AND CAST("SESSION" AS TEXT) = '{sess}'
+                  AND UPPER(TRIM(CAST("MONTH" AS TEXT))) IN ('{m_str}')
+                GROUP BY 1
+            '''
+            try:
+                df_b = pd.read_sql(text(qb), conn)
+                if not df_b.empty: b_frames.append(df_b)
+            except Exception: pass
+            
+            try:
+                df_p = pd.read_sql(text(qp), conn)
+                if not df_p.empty: p_frames.append(df_p)
+            except Exception: pass
+
+    all_stns = pd.DataFrame({'stn': [s.strip().upper() for s in stations_tuple]})
+    
+    if b_frames:
+        cat_b = pd.concat(b_frames, ignore_index=True).groupby('stn', as_index=False).sum()
+        all_stns = pd.merge(all_stns, cat_b, on='stn', how='left')
+    else:
+        all_stns['b_pass'] = 0; all_stns['b_earn'] = 0.0
+        
+    if p_frames:
+        cat_p = pd.concat(p_frames, ignore_index=True).groupby('stn', as_index=False).sum()
+        all_stns = pd.merge(all_stns, cat_p, on='stn', how='left')
+    else:
+        all_stns['p_pass'] = 0; all_stns['p_earn'] = 0.0
+
+    all_stns = all_stns.fillna(0)
+    all_stns['Booking Passengers'] = all_stns['b_pass']
+    all_stns['Prs Passenger'] = all_stns['p_pass']
+    all_stns['Total Passengers'] = all_stns['b_pass'] + all_stns['p_pass']
+    all_stns['Booking Earning'] = all_stns['b_earn']
+    all_stns['Prs Earning'] = all_stns['p_earn']
+    all_stns['Total Earning'] = all_stns['b_earn'] + all_stns['p_earn']
+    
+    all_stns = all_stns.rename(columns={'stn': 'Station Code'})
+    res_cols = ['Station Code', 'Booking Passengers', 'Prs Passenger', 'Total Passengers', 'Booking Earning', 'Prs Earning', 'Total Earning']
+    return all_stns[res_cols].sort_values('Total Earning', ascending=False)
+
+@st.cache_data(ttl=3600, show_spinner=False)
 def fetch_tab_filtered_data(table_name, station_code, filters_tuple):
     frames = []
     with engine.connect() as conn:
@@ -537,6 +623,13 @@ QUARTERS = {
     'Q4 (Jan-Mar)': ['Jan', 'Feb', 'Mar']
 }
 
+# Dynamic Previous Month Calculation for Auto-Defaulting Filter
+now = datetime.now()
+current_month_num = now.month
+prev_month_num = 12 if current_month_num == 1 else current_month_num - 1
+month_num_to_abbr = {1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec'}
+default_ending_month = month_num_to_abbr.get(prev_month_num, 'Aug')
+
 # ----------------- SIDEBAR & FILTERS -----------------
 st.sidebar.markdown(f"👤 **User:** `{st.session_state.username}`")
 if st.sidebar.button("🔒 Logout", use_container_width=True):
@@ -552,6 +645,9 @@ try:
     selected_station = st.sidebar.selectbox("Select Station", stns)
 except Exception as e:
     st.error(f"Error loading stations: {e}"); st.stop()
+
+# Multi-Station Selection for Total Earning Summary Tab
+selected_multi_stations = st.sidebar.multiselect("Select Multiple Stations (Summary Tab)", stns, default=stns[:5] if len(stns) >= 5 else stns)
 
 # Fast Cached Session Select
 try:
@@ -585,7 +681,8 @@ if filter_type in ["Quarterly", "6 Months", "Full Year", "Custom Months"]:
     query_filters_prev = [(prev_raw_session, tuple(selected_months))]
     display_period_text = f"Months: {', '.join(selected_months)}"
 else:
-    end_m = st.sidebar.selectbox("Current/Ending Month", MONTH_ORDER, index=3)
+    def_idx = MONTH_ORDER.index(default_ending_month) if default_ending_month in MONTH_ORDER else 4
+    end_m = st.sidebar.selectbox("Current/Ending Month", MONTH_ORDER, index=def_idx)
     n_months = 3 if filter_type == "Last 3 Months" else 6
     end_idx = MONTH_ORDER.index(end_m)
     
@@ -603,6 +700,13 @@ else:
     display_period_text = f"{filter_type} (Ending {end_m})"
 
 total_days = sum([sum([MONTH_DAYS.get(m, 30) for m in m_list]) for _, m_list in query_filters_curr])
+
+# Generate Clear Financial Period Range Description String (e.g. 2025-26 Mar to 2026-27 Aug)
+period_range_desc_parts = []
+for sess, m_list in query_filters_curr:
+    if m_list:
+        period_range_desc_parts.append(f"{format_session(sess)} {m_list[0]} to {format_session(sess)} {m_list[-1]}")
+period_range_desc = " | ".join(period_range_desc_parts)
 
 # Cached Station Details
 stn_name, cat, cmi_sec, cmi_name = fetch_station_details(selected_station)
@@ -691,8 +795,8 @@ render_centered_metric(c5, "PARCEL FREIGHT", pr_ear_curr, pr_ear_prev, total_day
 st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
 # ----------------- TABS & CUSTOM CENTERED TABLE RENDER -----------------
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "Booking", "PRS Org", "Combined Passenger", "Goods", "Parcel", "Reservation"
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    "Booking", "PRS Org", "Combined Passenger", "Goods", "Parcel", "Reservation", "Multiple Stations Summary"
 ])
 
 def render_table_with_totals(df, title):
@@ -719,6 +823,7 @@ def render_table_with_totals(df, title):
     
     if 'MONTH' in df.columns: total_row['MONTH'] = 'TOTAL'
     if 'Fmt Session' in df.columns: total_row['Fmt Session'] = 'ALL'
+    if 'Station Code' in df.columns: total_row['Station Code'] = 'TOTAL'
     
     df_totals = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
     df_totals.columns = [str(c).replace('_', ' ').title() for c in df_totals.columns]
@@ -827,3 +932,11 @@ with tab6:
             df_res = df_res.drop(columns=[c for c in cols_to_drop if c in df_res.columns])
             
     render_table_with_totals(df_res, "Reservation")
+
+with tab7:
+    st.markdown(f'<div class="period-info-box">🗓️ <b>Data Period:</b> {period_range_desc}</div>', unsafe_allow_html=True)
+    if not selected_multi_stations:
+        st.warning("Please select at least one station from sidebar 'Select Multiple Stations (Summary Tab)' to view results.")
+    else:
+        df_multi_res = fetch_multi_station_summary(tuple(selected_multi_stations), tuple_curr_filters)
+        render_table_with_totals(df_multi_res, "Multiple Stations Summary")
