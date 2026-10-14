@@ -153,6 +153,7 @@ st.markdown("""
             flex-direction: column;
             justify-content: space-between;
             overflow: hidden;
+            border-radius: 16px;
         }
 
         .login-left-banner::before {
@@ -240,20 +241,11 @@ st.markdown("""
         .login-right-panel {
             flex: 1;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 2rem;
             background-color: #f8fafc;
-        }
-
-        .login-card-box {
-            background: #ffffff;
-            border-radius: 20px;
-            padding: 2.8rem 3rem;
-            width: 100%;
-            max-width: 460px;
-            box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
-            border: 1px solid #f1f5f9;
         }
 
         .card-top-icon {
@@ -521,7 +513,7 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 
 if not st.session_state.authenticated:
-    col_left, col_right = st.columns([1, 1], gap="none")
+    col_left, col_right = st.columns([1, 1], gap="small")
     
     with col_left:
         st.markdown('''
