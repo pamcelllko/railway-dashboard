@@ -149,19 +149,21 @@ st.markdown("""
             font-family: 'Roboto', sans-serif !important;
         }
 
-        /* ----- PERFECTLY CENTERED CUSTOM EYE SVG ICON FOR PASSWORD INPUT ----- */
-        div[data-testid="stTextInput"] {
+        /* ----- PERFECT VERTICAL CENTERING OF EYE ICON IN INPUT BAR ----- */
+        div[data-testid="stTextInput"] > div {
             position: relative !important;
+            display: flex !important;
+            align-items: center !important;
         }
 
         div[data-testid="stTextInput"] button[aria-label*="password"],
         div[data-testid="stTextInput"] button {
             position: absolute !important;
-            right: 10px !important;
+            right: 12px !important;
             top: 50% !important;
             transform: translateY(-50%) !important;
-            width: 24px !important;
-            height: 24px !important;
+            width: 22px !important;
+            height: 22px !important;
             background-color: transparent !important;
             background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%23334155'><path d='M256 128c-106 0-200 64-240 128 40 64 134 128 240 128s200-64 240-128c-40-64-134-128-240-128zm0 208c-44.2 0-80-35.8-80-80s35.8-80 80-80 80 35.8 80 80-35.8 80-80 80zm0-128c-26.5 0-48 21.5-48 48s21.5 48 48 48 48-21.5 48-48-21.5-48-48-48z'/><path d='M100 80l40 30M200 50l10 50M310 50l-10 50M410 80l-40 30' stroke='%23334155' stroke-width='28' stroke-linecap='round'/></svg>") !important;
             background-repeat: no-repeat !important;
@@ -175,6 +177,7 @@ st.markdown("""
             overflow: hidden !important;
             color: transparent !important;
             font-size: 0 !important;
+            z-index: 10 !important;
         }
 
         div[data-testid="stTextInput"] button * {
