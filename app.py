@@ -112,7 +112,7 @@ def verify_user(username, password):
     except Exception as e:
         return False, "ERROR", str(e)
 
-# ----------------- ADVANCED ROBOTO TYPOGRAPHY & PROFESSIONAL CSS FIXES -----------------
+# ----------------- ADVANCED ROBOTO TYPOGRAPHY & CLEAN EYE ICON CSS -----------------
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,400&display=swap');
@@ -149,26 +149,38 @@ st.markdown("""
             font-family: 'Roboto', sans-serif !important;
         }
 
-        /* ----- EYE ICON FOR PASSWORD VISIBILITY TOGGLE ----- */
-        div[data-testid="stTextInput"] div[role="button"],
+        /* ----- GOOGLE STYLE EYE ICON FOR PASSWORD TOGGLE ----- */
         div[data-testid="stTextInput"] button[aria-label*="password"],
         div[data-testid="stTextInput"] button {
-            font-size: 0 !important;
+            position: absolute !important;
+            right: 8px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            width: 32px !important;
+            height: 32px !important;
             background: transparent !important;
             border: none !important;
             box-shadow: none !important;
-            padding: 0 8px !important;
+            padding: 0 !important;
+            margin: 0 !important;
             cursor: pointer !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
+            overflow: hidden !important;
+            color: transparent !important;
         }
-        div[data-testid="stTextInput"] div[role="button"]::after,
-        div[data-testid="stTextInput"] button[aria-label*="password"]::after,
-        div[data-testid="stTextInput"] button::after {
+        
+        div[data-testid="stTextInput"] button::before {
             content: "👁️" !important;
-            font-size: 1.1rem !important;
-            visibility: visible !important;
+            font-size: 1.15rem !important;
+            color: #64748b !important;
+            opacity: 0.8 !important;
+            display: block !important;
+        }
+
+        div[data-testid="stTextInput"] button:hover::before {
+            opacity: 1 !important;
         }
 
         .main-title {
