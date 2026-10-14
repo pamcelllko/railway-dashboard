@@ -521,7 +521,6 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 
 if not st.session_state.authenticated:
-    # 50/50 Columns for Split Design
     col_left, col_right = st.columns([1, 1], gap="none")
     
     with col_left:
@@ -529,7 +528,7 @@ if not st.session_state.authenticated:
             <div class="login-left-banner">
                 <div class="banner-header">
                     <div class="banner-logo-title">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="#1d4ed8"><path d="M12 2c-4 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h12v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-4-4-8-4zm0 2c3.71 0 5.8 0 6 2H6c.2-2 2.29-2 6-2zm-5 6.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm10 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm-5 6.5c-2.76 0-5-1.12-5-2.5h10c0 1.38-2.24 2.5-5 2.5z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="#1d4ed8"><path d="M12 2c-4 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h12v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-4-4-8-4zm0 2c3.71 0 5.8 0 6 2H6c.2-2 2.29-2 6-2zm-5 6.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm10 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5-1.5zm-5 6.5c-2.76 0-5-1.12-5-2.5h10c0 1.38-2.24 2.5-5 2.5z"/></svg>
                         <div>
                             Railway Earning<br>Dashboard Access
                         </div>
@@ -702,7 +701,7 @@ def fetch_station_details(station_code):
                 matched = df_stn[df_stn[code_col].astype(str).str.strip().str.upper() == station_code.strip().upper()]
                 if not matched.empty:
                     r = matched.iloc[0]
-                    row_map = {str(k).upper().replace('_', '').replace(' ", "").strip(): v for k, v in r.items()}
+                    row_map = {str(k).upper().replace('_', '').replace(' ', '').strip(): v for k, v in r.items()}
                     return (
                         row_map.get('STATIONNAME', row_map.get('STNAME', '')),
                         row_map.get('CATEGORY', row_map.get('CAT', '')),
