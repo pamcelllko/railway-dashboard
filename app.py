@@ -17,7 +17,10 @@ st.set_page_config(
 )
 
 # ----------------- SECURE DATABASE CREDENTIALS -----------------
-SUPABASE_URL = st.secrets.get("SUPABASE_URL", "postgresql+psycopg2://postgres.ggrpypensvabbvpyzqbx:2234723pamcell@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require").strip()
+# Fallback to direct port 5432 or pooler 6543
+DEFAULT_DB_URL = "postgresql+psycopg2://postgres.ggrpypensvabbvpyzqbx:2234723pamcell@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
+SUPABASE_URL = st.secrets.get("SUPABASE_URL", DEFAULT_DB_URL).strip()
+
 ADMIN_NAME = "Mohammed Rafik"
 ADMIN_EMAIL = "adilrafeeque@gmail.com"
 
@@ -25,9 +28,10 @@ ADMIN_EMAIL = "adilrafeeque@gmail.com"
 def get_database_connection():
     return create_engine(
         SUPABASE_URL, 
-        pool_size=15,
-        max_overflow=25,
+        pool_size=10,
+        max_overflow=20,
         pool_pre_ping=True,
+        pool_recycle=300,
         isolation_level="AUTOCOMMIT"
     )
 
@@ -109,7 +113,7 @@ def verify_user(username, password):
     except Exception as e:
         return False, "ERROR", str(e)
 
-# ----------------- ADVANCED ROBOTO TYPOGRAPHY & EXACT CAPSULE TABS CSS -----------------
+# ----------------- ADVANCED ROBOTO TYPOGRAPHY & CSS FIXES -----------------
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,400&display=swap');
@@ -135,7 +139,7 @@ st.markdown("""
         }
 
         .block-container { 
-            padding-top: 2.8rem !important; 
+            padding-top: 2.2rem !important; 
             padding-bottom: 1rem !important;
             padding-left: 1.2rem !important;
             padding-right: 1.2rem !important;
@@ -144,6 +148,15 @@ st.markdown("""
         
         html, body, [class*="css"], h1, h2, h3, h4, h5, h6, div, span, p {
             font-family: 'Roboto', sans-serif !important;
+        }
+
+        /* LOGIN FORM PASSWORD ICON VISIBILITY FIX */
+        div[data-testid="stTextInput"] input {
+            padding-right: 2.5rem !important;
+        }
+        div[data-testid="stTextInput"] button {
+            right: 0.5rem !important;
+            min-width: unset !important;
         }
 
         .main-title {
@@ -256,7 +269,7 @@ st.markdown("""
             border: 1px solid #ef4444 !important;
         }
 
-        /* ----- CAPSULE / PILL TABS DESIGN WITH SAFE PADDING ----- */
+        /* CAPSULE / PILL TABS DESIGN WITH SAFE PADDING */
         .stTabs [data-baseweb="tab-list"] {
             gap: 10px !important;
             border-bottom: 2px solid #e2e8f0 !important;
@@ -295,14 +308,13 @@ st.markdown("""
             padding: 6px 18px !important;
             box-shadow: 0 2px 6px rgba(0, 115, 234, 0.3) !important;
         }
-        /* Red Underline Effect Below Active Tab */
         .stTabs [data-baseweb="tab-highlight-title"] {
             background-color: #ff0000 !important;
             height: 3px !important;
             border-radius: 2px !important;
         }
 
-        /* ----- CUSTOM HTML TABLE CENTRALIZE CSS ----- */
+        /* CUSTOM HTML TABLE CENTRALIZE CSS */
         .custom-dashboard-table {
             width: 100%;
             border-collapse: collapse;
@@ -364,7 +376,7 @@ if "username" not in st.session_state:
 
 if not st.session_state.authenticated:
     st.markdown("<h2 style='text-align: center; color: var(--text-main); font-weight:800; font-family: Roboto;'>🚄 Railway Earning Dashboard Access</h2>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 1.2, 1])
+    col1, col2, col3 = st.columns([0.8, 1.4, 0.8])
     with col2:
         auth_mode = st.radio("Choose Option", ["Login", "Sign Up / Reset Account Password"], horizontal=True)
         if auth_mode == "Login":
@@ -623,7 +635,7 @@ QUARTERS = {
     'Q4 (Jan-Mar)': ['Jan', 'Feb', 'Mar']
 }
 
-# Dynamic Previous Month Calculation for Auto-Defaulting Filter
+# Dynamic Previous Month Calculation
 now = datetime.now()
 current_month_num = now.month
 prev_month_num = 12 if current_month_num == 1 else current_month_num - 1
@@ -701,7 +713,6 @@ else:
 
 total_days = sum([sum([MONTH_DAYS.get(m, 30) for m in m_list]) for _, m_list in query_filters_curr])
 
-# Generate Clear Financial Period Range Description String (e.g. 2025-26 Mar to 2026-27 Aug)
 period_range_desc_parts = []
 for sess, m_list in query_filters_curr:
     if m_list:
@@ -804,7 +815,6 @@ def render_table_with_totals(df, title):
         st.info(f"No records available for {title} in selected period.")
         return
     
-    # Financial Year Month Order Sorting & Session Sorting
     if 'MONTH' in df.columns:
         df['MONTH'] = df['MONTH'].astype(str).str.strip().str.title()
         df['MONTH'] = pd.Categorical(df['MONTH'], categories=MONTH_ORDER, ordered=True)
@@ -828,7 +838,6 @@ def render_table_with_totals(df, title):
     df_totals = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
     df_totals.columns = [str(c).replace('_', ' ').title() for c in df_totals.columns]
 
-    # Format values for HTML rendering without decimals
     formatted_df = df_totals.copy()
     for col in formatted_df.columns:
         col_u = col.upper()
@@ -840,7 +849,6 @@ def render_table_with_totals(df, title):
             if col in num_cols:
                 formatted_df[col] = formatted_df[col].apply(lambda x: format_plain_number(x) if pd.notna(x) else "0")
 
-    # Build HTML Table with Guaranteed 100% Center Align Headers & Body Cells
     html_code = '<table class="custom-dashboard-table"><thead><tr>'
     for col in formatted_df.columns:
         html_code += f'<th>{col}</th>'
@@ -880,32 +888,27 @@ with tab3:
         m_df = pd.merge(df_b, df_p, on=['FMT SESSION', 'MONTH'], how='outer', suffixes=('_BOOKING', '_PRS'))
         combined = pd.DataFrame()
         
-        # 1. Session & Month Columns
         combined['Fmt Session'] = m_df['FMT SESSION']
         combined['MONTH'] = m_df['MONTH']
         
-        # 2. Passengers Bifurcation
         pass_b = m_df.get('PASSENGERS_BOOKING', m_df.get('PASSENGER_BOOKING', 0)).fillna(0)
         pass_p = m_df.get('PASSENGERS_PRS', m_df.get('PASSENGER_PRS', 0)).fillna(0)
         combined['Booking Passengers'] = pass_b
         combined['Prs Passenger'] = pass_p
         combined['Total Passengers'] = pass_b + pass_p
         
-        # 3. Earnings Bifurcation
         earn_b = m_df.get('EARNING', 0).fillna(0)
         earn_p = m_df.get('EARNINGS', 0).fillna(0)
         combined['Booking Earning'] = earn_b
         combined['Prs Earning'] = earn_p
         combined['Total Earning'] = earn_b + earn_p
         
-        # Reorder Exact Columns Requested
         desired_cols = [
             'Fmt Session', 'MONTH', 'Booking Passengers', 'Prs Passenger', 
             'Total Passengers', 'Booking Earning', 'Prs Earning', 'Total Earning'
         ]
         combined = combined[desired_cols]
         
-        # Season & Session-Wise Month Sorting
         combined['MONTH'] = pd.Categorical(combined['MONTH'], categories=MONTH_ORDER, ordered=True)
         combined = combined.sort_values(['Fmt Session', 'MONTH']).dropna(subset=['MONTH'])
         
@@ -922,7 +925,6 @@ with tab5:
 with tab6:
     df_res = fetch_tab_filtered_data('reservation', selected_station, tuple_curr_filters)
     if not df_res.empty:
-        # Hide/Drop blank 'Earning' / 'EARNING' or 'ROPD' columns, keep Net Cash intact
         cols_to_drop = []
         for col in df_res.columns:
             c_clean = str(col).upper().replace('_', '').replace(' ', '').strip()
