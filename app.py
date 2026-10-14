@@ -112,7 +112,7 @@ def verify_user(username, password):
     except Exception as e:
         return False, "ERROR", str(e)
 
-# ----------------- ADVANCED ROBOTO TYPOGRAPHY & CLEAN EYE ICON CSS -----------------
+# ----------------- ADVANCED ROBOTO TYPOGRAPHY & PERFECT CENTERED EYE ICON CSS -----------------
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,400&display=swap');
@@ -149,38 +149,36 @@ st.markdown("""
             font-family: 'Roboto', sans-serif !important;
         }
 
-        /* ----- GOOGLE STYLE EYE ICON FOR PASSWORD TOGGLE ----- */
+        /* ----- PERFECTLY CENTERED CUSTOM EYE SVG ICON FOR PASSWORD INPUT ----- */
+        div[data-testid="stTextInput"] {
+            position: relative !important;
+        }
+
         div[data-testid="stTextInput"] button[aria-label*="password"],
         div[data-testid="stTextInput"] button {
             position: absolute !important;
-            right: 8px !important;
+            right: 10px !important;
             top: 50% !important;
             transform: translateY(-50%) !important;
-            width: 32px !important;
-            height: 32px !important;
-            background: transparent !important;
+            width: 24px !important;
+            height: 24px !important;
+            background-color: transparent !important;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%23334155'><path d='M256 128c-106 0-200 64-240 128 40 64 134 128 240 128s200-64 240-128c-40-64-134-128-240-128zm0 208c-44.2 0-80-35.8-80-80s35.8-80 80-80 80 35.8 80 80-35.8 80-80 80zm0-128c-26.5 0-48 21.5-48 48s21.5 48 48 48 48-21.5 48-48-21.5-48-48-48z'/><path d='M100 80l40 30M200 50l10 50M310 50l-10 50M410 80l-40 30' stroke='%23334155' stroke-width='28' stroke-linecap='round'/></svg>") !important;
+            background-repeat: no-repeat !important;
+            background-position: center !important;
+            background-size: contain !important;
             border: none !important;
             box-shadow: none !important;
             padding: 0 !important;
             margin: 0 !important;
             cursor: pointer !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
             overflow: hidden !important;
             color: transparent !important;
-        }
-        
-        div[data-testid="stTextInput"] button::before {
-            content: "👁️" !important;
-            font-size: 1.15rem !important;
-            color: #64748b !important;
-            opacity: 0.8 !important;
-            display: block !important;
+            font-size: 0 !important;
         }
 
-        div[data-testid="stTextInput"] button:hover::before {
-            opacity: 1 !important;
+        div[data-testid="stTextInput"] button * {
+            display: none !important;
         }
 
         .main-title {
