@@ -10,7 +10,7 @@ from datetime import datetime
 
 # ----------------- PAGE CONFIGURATION -----------------
 st.set_page_config(
-    page_title="Railway Earning Executive Dashboard", 
+    page_title="Railway Earning Dashboard Access", 
     page_icon="🚄",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -57,7 +57,7 @@ def get_train_logo_html():
         except Exception: pass
     
     return """
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="36" height="36" style="vertical-align: middle; fill: #1d4ed8; margin-right:8px;">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="36" height="36" style="vertical-align: middle; fill: #0B49B5; margin-right:8px;">
       <path d="M480 384c0 13.255-10.745 24-24 24H56c-13.255 0-24-10.745-24-24s10.745-24 24-24h400c13.255 0 24 10.745 24 24zM88 320l-48 96h432l-48-96H88zm320-192c0-35.346-28.654-64-64-64H168c-35.346 0-64 28.654-64 64v160h304V128zm-224 0h144v48H184v-48z"/>
     </svg>
     """
@@ -112,18 +112,20 @@ def verify_user(username, password):
     except Exception as e:
         return False, "ERROR", str(e)
 
-# ----------------- ADVANCED ROBOTO TYPOGRAPHY & MODERN LOGIN CSS -----------------
+# ----------------- CUSTOM LOGIN UI & DASHBOARD STYLING -----------------
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@300;400;500;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         
         :root {
-            --bg-card: #ffffff;
-            --border-card: #e2e8f0;
-            --text-main: #0f172a;
-            --text-sub: #475569;
-            --text-muted: #64748b;
-            --table-header-bg: #f1f5f9;
+            --primary: #0B49B5;
+            --secondary: #17366F;
+            --background: #F4F8FD;
+            --cardBackground: #FFFFFF;
+            --textColor: #10234B;
+            --mutedText: #526987;
+            --borderColor: #DCE4EF;
+            --borderRadius: 16px;
         }
 
         .block-container { 
@@ -132,164 +134,146 @@ st.markdown("""
         }
         
         html, body, [class*="css"], h1, h2, h3, h4, h5, h6, div, span, p {
-            font-family: 'Plus Jakarta Sans', 'Roboto', sans-serif !important;
+            font-family: 'Inter', sans-serif !important;
         }
 
-        /* FULL PAGE CONTAINER SPLIT SCREEN */
-        .login-split-container {
-            display: flex;
-            min-height: 100vh;
-            width: 100vw;
-            background-color: #f8fafc;
-            overflow: hidden;
-        }
-
+        /* LEFT PANEL BANNER STYLING */
         .login-left-banner {
-            flex: 1;
-            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%);
-            position: relative;
-            padding: 3rem 4rem;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 50%, #93c5fd 100%);
+            padding: 2.5rem 3rem;
+            border-radius: var(--borderRadius);
+            min-height: 88vh;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            overflow: hidden;
-            border-radius: 16px;
-        }
-
-        .login-left-banner::before {
-            content: "";
-            position: absolute;
-            top: -100px;
-            left: -100px;
-            width: 300px;
-            height: 300px;
-            border-radius: 50%;
-            background: rgba(147, 197, 253, 0.4);
-            z-index: 1;
-        }
-
-        .banner-header {
-            position: relative;
-            z-index: 2;
+            box-shadow: 0 10px 30px rgba(11, 73, 181, 0.08);
         }
 
         .banner-logo-title {
             display: flex;
             align-items: center;
-            gap: 16px;
-            font-size: 2.2rem;
+            gap: 14px;
+            font-size: 1.85rem;
             font-weight: 800;
-            color: #0f172a;
-            line-height: 1.2;
+            color: var(--textColor);
+            line-height: 1.25;
             margin-bottom: 12px;
         }
 
         .banner-subtext {
-            font-size: 1.05rem;
-            color: #334155;
+            font-size: 0.95rem;
+            color: var(--mutedText);
             font-weight: 500;
-            max-width: 480px;
+            line-height: 1.5;
             margin-bottom: 2rem;
+            max-width: 440px;
         }
 
-        .banner-features {
+        .banner-features-grid {
             display: flex;
-            gap: 24px;
+            gap: 18px;
             margin-bottom: 2rem;
-            position: relative;
-            z-index: 2;
         }
 
-        .feature-item {
+        .feature-box {
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
-            width: 110px;
+            flex: 1;
         }
 
         .feature-icon-circle {
-            width: 52px;
-            height: 52px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin-bottom: 8px;
-            font-size: 1.3rem;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            font-size: 1.2rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.04);
         }
 
-        .feature-text {
-            font-size: 0.82rem;
+        .feature-title-text {
+            font-size: 0.8rem;
             font-weight: 600;
-            color: #1e293b;
-            line-height: 1.25;
+            color: var(--textColor);
+            line-height: 1.2;
         }
 
-        .banner-hero-img {
-            position: relative;
-            z-index: 2;
+        .banner-train-image {
             width: 100%;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            border-radius: 12px;
+            box-shadow: 0 12px 28px rgba(16, 35, 75, 0.15);
             object-fit: cover;
-            max-height: 380px;
+            max-height: 320px;
         }
 
-        /* RIGHT FORM PANEL */
+        /* RIGHT PANEL FORM STYLING */
         .login-right-panel {
-            flex: 1;
+            background-color: var(--background);
+            padding: 2.5rem;
+            min-height: 88vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 2rem;
-            background-color: #f8fafc;
+            border-radius: var(--borderRadius);
+        }
+
+        .login-card-container {
+            background: var(--cardBackground);
+            border: 1px solid var(--borderColor);
+            border-radius: 20px;
+            padding: 2.5rem 2.8rem;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 15px 35px rgba(16, 35, 75, 0.05);
         }
 
         .card-top-icon {
             text-align: center;
-            margin-bottom: 1rem;
+            margin-bottom: 12px;
         }
 
-        .card-welcome-title {
-            font-size: 1.8rem;
+        .card-title {
+            font-size: 1.75rem;
             font-weight: 800;
-            color: #0f172a;
+            color: var(--textColor);
             text-align: center;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
 
-        .card-welcome-sub {
-            font-size: 0.92rem;
-            color: #64748b;
+        .card-desc {
+            font-size: 0.88rem;
+            color: var(--mutedText);
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 1.8rem;
         }
 
-        /* CUSTOM STREAMLIT INPUT OVERRIDES */
+        /* INPUT FIELD OVERRIDES */
         div[data-testid="stTextInput"] label {
             font-weight: 600 !important;
-            color: #1e293b !important;
-            font-size: 0.9rem !important;
-            margin-bottom: 6px !important;
+            color: var(--textColor) !important;
+            font-size: 0.88rem !important;
+            margin-bottom: 4px !important;
         }
 
         div[data-testid="stTextInput"] input {
             border-radius: 10px !important;
-            border: 1px solid #e2e8f0 !important;
-            padding: 10px 14px 10px 38px !important;
+            border: 1px solid var(--borderColor) !important;
+            padding: 10px 14px !important;
             font-size: 0.92rem !important;
             background-color: #ffffff !important;
         }
 
         div[data-testid="stTextInput"] input:focus {
-            border-color: #2563eb !important;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+            border-color: var(--primary) !important;
+            box-shadow: 0 0 0 3px rgba(11, 73, 181, 0.12) !important;
         }
 
-        /* PERFECT EYE TOGGLE BUTTON POSITIONING */
+        /* EYE ICON ALIGNMENT IN PASSWORD FIELD */
         div[data-testid="stTextInput"] {
             position: relative !important;
         }
@@ -303,7 +287,7 @@ st.markdown("""
             width: 22px !important;
             height: 22px !important;
             background-color: transparent !important;
-            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%2364748b'><path d='M256 128c-106 0-200 64-240 128 40 64 134 128 240 128s200-64 240-128c-40-64-134-128-240-128zm0 208c-44.2 0-80-35.8-80-80s35.8-80 80-80 80 35.8 80 80-35.8 80-80 80zm0-128c-26.5 0-48 21.5-48 48s21.5 48 48 48 48-21.5 48-48-21.5-48-48-48z'/><path d='M100 80l40 30M200 50l10 50M310 50l-10 50M410 80l-40 30' stroke='%2364748b' stroke-width='28' stroke-linecap='round'/></svg>") !important;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%23526987'><path d='M256 128c-106 0-200 64-240 128 40 64 134 128 240 128s200-64 240-128c-40-64-134-128-240-128zm0 208c-44.2 0-80-35.8-80-80s35.8-80 80-80 80 35.8 80 80-35.8 80-80 80zm0-128c-26.5 0-48 21.5-48 48s21.5 48 48 48 48-21.5 48-48-21.5-48-48-48z'/><path d='M100 80l40 30M200 50l10 50M310 50l-10 50M410 80l-40 30' stroke='%23526987' stroke-width='28' stroke-linecap='round'/></svg>") !important;
             background-repeat: no-repeat !important;
             background-position: center !important;
             background-size: contain !important;
@@ -320,56 +304,51 @@ st.markdown("""
             display: none !important;
         }
 
-        /* BLUE LOGIN BUTTON */
+        /* PRIMARY BLUE SUBMIT BUTTON */
         div[data-testid="stForm"] button[kind="primary"],
         div[data-testid="stForm"] button {
-            background-color: #0d47a1 !important;
+            background-color: var(--primary) !important;
             color: #ffffff !important;
             font-weight: 700 !important;
-            font-size: 1.05rem !important;
+            font-size: 1rem !important;
             border-radius: 10px !important;
-            padding: 12px 0 !important;
+            padding: 10px 0 !important;
             border: none !important;
-            box-shadow: 0 4px 12px rgba(13, 71, 161, 0.25) !important;
+            box-shadow: 0 4px 12px rgba(11, 73, 181, 0.22) !important;
             transition: all 0.2s ease !important;
             width: 100% !important;
         }
 
         div[data-testid="stForm"] button:hover {
-            background-color: #1565c0 !important;
-            box-shadow: 0 6px 16px rgba(21, 101, 192, 0.35) !important;
+            background-color: var(--secondary) !important;
+            box-shadow: 0 6px 16px rgba(23, 54, 111, 0.3) !important;
             transform: translateY(-1px) !important;
         }
 
-        .card-footer-text {
+        .card-footer-note {
             text-align: center;
             font-size: 0.8rem;
-            color: #94a3b8;
-            margin-top: 1.8rem;
+            color: var(--mutedText);
+            margin-top: 1.5rem;
         }
-        
+
         /* DASHBOARD CONTENT CSS */
         .main-title {
-            font-family: 'Roboto', sans-serif !important;
             font-size: 1.45rem !important;
             font-weight: 900 !important;
-            color: var(--text-main) !important;
-            letter-spacing: -0.2px;
-            line-height: 1.3 !important;
+            color: var(--textColor) !important;
             display: flex;
             align-items: center;
         }
         .station-subtitle {
-            font-family: 'Roboto', sans-serif !important;
             font-size: 0.9rem !important;
-            color: var(--text-sub) !important;
+            color: var(--mutedText) !important;
             font-weight: 500 !important;
             margin-top: 4px !important;
         }
         .station-meta-info {
-            font-family: 'Roboto', sans-serif !important;
             font-size: 0.85rem !important;
-            color: #1d4ed8 !important;
+            color: var(--primary) !important;
             font-weight: 700 !important;
             margin-top: 6px !important;
             background-color: #eff6ff;
@@ -379,27 +358,26 @@ st.markdown("""
             display: inline-block;
         }
         .highlight-badge {
-            background-color: #1e3a8a;
+            background-color: var(--secondary);
             color: #ffffff !important;
             padding: 2px 8px;
             border-radius: 5px;
             font-weight: 700;
         }
         .days-badge {
-            font-family: 'Roboto', sans-serif !important;
             font-size: 0.85rem;
             font-weight: 700;
-            background-color: var(--bg-card);
-            color: var(--text-main);
+            background-color: var(--cardBackground);
+            color: var(--textColor);
             padding: 7px 16px;
             border-radius: 8px;
-            border: 1px solid var(--border-card);
+            border: 1px solid var(--borderColor);
             display: inline-block;
         }
 
         .metric-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-card);
+            background: var(--cardBackground);
+            border: 1px solid var(--borderColor);
             border-radius: 10px;
             padding: 12px 8px;
             text-align: center !important;
@@ -413,18 +391,18 @@ st.markdown("""
         .metric-title {
             font-size: 0.75rem;
             font-weight: 700;
-            color: var(--text-sub);
+            color: var(--mutedText);
             text-transform: uppercase;
         }
         .metric-value {
             font-size: 1.22rem;
             font-weight: 900;
-            color: var(--text-main);
+            color: var(--textColor);
             margin: 2px 0;
         }
         .metric-sub {
             font-size: 0.72rem;
-            color: var(--text-muted);
+            color: var(--mutedText);
             font-weight: 500;
         }
         .metric-delta-pos {
@@ -444,35 +422,15 @@ st.markdown("""
             border-radius: 20px !important;
         }
 
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 10px !important;
-            border-bottom: 2px solid #e2e8f0 !important;
-            margin-bottom: 16px !important;
-        }
-        .stTabs [data-baseweb="tab"] {
-            height: auto !important;
-            padding: 6px 18px !important;
-            font-weight: 500 !important;
-            font-size: 0.92rem !important;
-            border-radius: 25px !important;
-            color: #555555 !important;
-            background-color: transparent !important;
-        }
-        .stTabs [aria-selected="true"] {
-            background-color: #0073ea !important;
-            color: #ffffff !important;
-            font-weight: 700 !important;
-        }
-
         .custom-dashboard-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 0.85rem;
             margin-top: 8px;
-            background-color: var(--bg-card);
+            background-color: var(--cardBackground);
             border-radius: 8px;
             overflow: hidden;
-            border: 1px solid var(--border-card);
+            border: 1px solid var(--borderColor);
         }
         .custom-dashboard-table th {
             background-color: #f1f5f9 !important;
@@ -480,13 +438,13 @@ st.markdown("""
             font-weight: 700 !important;
             text-align: center !important;
             padding: 10px 14px !important;
-            border: 1px solid #e2e8f0 !important;
+            border: 1px solid var(--borderColor) !important;
         }
         .custom-dashboard-table td {
             text-align: center !important;
             padding: 9px 12px !important;
-            border: 1px solid #e2e8f0 !important;
-            color: var(--text-main) !important;
+            border: 1px solid var(--borderColor) !important;
+            color: var(--textColor) !important;
         }
         .custom-dashboard-table tr.total-row td {
             font-weight: 800 !important;
@@ -506,52 +464,50 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ----------------- LOGIN PAGE (EXACT IMAGE REPLICA) -----------------
+# ----------------- LOGIN PAGE (EXACT JSON & DESIGN REPLICA) -----------------
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "username" not in st.session_state:
     st.session_state.username = ""
 
 if not st.session_state.authenticated:
-    col_left, col_right = st.columns([1, 1], gap="small")
+    p_left, p_right = st.columns([1, 1], gap="small")
     
-    with col_left:
+    with p_left:
         st.markdown('''
             <div class="login-left-banner">
-                <div class="banner-header">
+                <div>
                     <div class="banner-logo-title">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="#1d4ed8"><path d="M12 2c-4 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h12v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-4-4-8-4zm0 2c3.71 0 5.8 0 6 2H6c.2-2 2.29-2 6-2zm-5 6.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm10 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5-1.5zm-5 6.5c-2.76 0-5-1.12-5-2.5h10c0 1.38-2.24 2.5-5 2.5z"/></svg>
-                        <div>
-                            Railway Earning<br>Dashboard Access
-                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="42" height="42" viewBox="0 0 24 24" fill="#0B49B5"><path d="M12 2c-4 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h12v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-4-4-8-4zm0 2c3.71 0 5.8 0 6 2H6c.2-2 2.29-2 6-2zm-5 6.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm10 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5-1.5zm-5 6.5c-2.76 0-5-1.12-5-2.5h10c0 1.38-2.24 2.5-5 2.5z"/></svg>
+                        <div>Railway Earning<br>Dashboard Access</div>
                     </div>
                     <div class="banner-subtext">
                         Track your earnings, manage your account and stay connected with the railway ecosystem.
                     </div>
                 </div>
                 
-                <div class="banner-features">
-                    <div class="feature-item">
-                        <div class="feature-icon-circle" style="background-color: #dbeafe; color: #2563eb;">📊</div>
-                        <div class="feature-text">View Earnings Reports</div>
+                <div class="banner-features-grid">
+                    <div class="feature-box">
+                        <div class="feature-icon-circle" style="background-color: #dbeafe; color: #0B49B5;">📊</div>
+                        <div class="feature-title-text">View Earnings Reports</div>
                     </div>
-                    <div class="feature-item">
+                    <div class="feature-box">
                         <div class="feature-icon-circle" style="background-color: #dcfce7; color: #16a34a;">🛡️</div>
-                        <div class="feature-text">Secure & Reliable Access</div>
+                        <div class="feature-title-text">Secure & Reliable Access</div>
                     </div>
-                    <div class="feature-item">
+                    <div class="feature-box">
                         <div class="feature-icon-circle" style="background-color: #f3e8ff; color: #9333ea;">👤</div>
-                        <div class="feature-text">Manage Your Account</div>
+                        <div class="feature-title-text">Manage Your Account</div>
                     </div>
                 </div>
                 
                 <div>
-                    <img src="https://images.unsplash.com/photo-1532105956626-9569c03602f6?q=80&w=1000&auto=format&fit=crop" class="banner-hero-img" alt="Vande Bharat Train">
+                    <img src="https://images.unsplash.com/photo-1532105956626-9569c03602f6?q=80&w=1000&auto=format&fit=crop" class="banner-train-image" alt="Railway Train">
                 </div>
             </div>
         ''', unsafe_allow_html=True)
 
-    with col_right:
+    with p_right:
         st.markdown('<div class="login-right-panel">', unsafe_allow_html=True)
         
         auth_mode = st.radio("Access Mode", ["Login", "Sign Up / Reset Password"], horizontal=True, label_visibility="collapsed")
@@ -559,10 +515,10 @@ if not st.session_state.authenticated:
         if auth_mode == "Login":
             st.markdown('''
                 <div class="card-top-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="#1d4ed8"><path d="M12 2c-4 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h12v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-4-4-8-4zm0 2c3.71 0 5.8 0 6 2H6c.2-2 2.29-2 6-2zm-5 6.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm10 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5-1.5zm-5 6.5c-2.76 0-5-1.12-5-2.5h10c0 1.38-2.24 2.5-5 2.5z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 24 24" fill="#0B49B5"><path d="M12 2c-4 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h12v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-4-4-8-4zm0 2c3.71 0 5.8 0 6 2H6c.2-2 2.29-2 6-2zm-5 6.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm10 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5-1.5zm-5 6.5c-2.76 0-5-1.12-5-2.5h10c0 1.38-2.24 2.5-5 2.5z"/></svg>
                 </div>
-                <div class="card-welcome-title">Welcome Back</div>
-                <div class="card-welcome-sub">Login to your Railway Earning Dashboard to continue</div>
+                <div class="card-title">Welcome Back</div>
+                <div class="card-desc">Login to your Railway Earning Dashboard to continue</div>
             ''', unsafe_allow_html=True)
             
             with st.form("login_form"):
@@ -573,7 +529,7 @@ if not st.session_state.authenticated:
                 with c_rem:
                     remember_me = st.checkbox("Remember me", value=True)
                 with c_forgot:
-                    st.markdown("<div style='text-align:right; font-size:0.85rem; padding-top:4px;'><a href='#' style='color:#2563eb; text-decoration:none; font-weight:600;'>Reset Password</a></div>", unsafe_allow_html=True)
+                    st.markdown("<div style='text-align:right; font-size:0.85rem; padding-top:4px;'><a href='#' style='color:#0B49B5; text-decoration:none; font-weight:600;'>Reset Password</a></div>", unsafe_allow_html=True)
                 
                 submit_login = st.form_submit_button("Login  →")
                 
@@ -593,12 +549,12 @@ if not st.session_state.authenticated:
                     else:
                         st.error(f"Login failed: {msg}")
                         
-            st.markdown('<div class="card-footer-text">Not a member? Contact your administrator</div>', unsafe_allow_html=True)
+            st.markdown('<div class="card-footer-note">Not a member? Contact your administrator</div>', unsafe_allow_html=True)
             
         else:
             st.markdown('''
-                <div class="card-welcome-title">Create / Reset Account</div>
-                <div class="card-welcome-sub">Enter credentials to register or reset password automatically</div>
+                <div class="card-title">Create / Reset Account</div>
+                <div class="card-desc">Enter credentials to register or reset password automatically</div>
             ''', unsafe_allow_html=True)
             
             with st.form("signup_form"):
@@ -973,7 +929,7 @@ def render_centered_metric(col, title, curr, prev, days, is_combined=False, pass
     if is_combined:
         pass_per_day = pass_val / days if days > 0 else 0
         content = f"""
-            <div class="metric-card" style="border-top: 4px solid #1d4ed8;">
+            <div class="metric-card" style="border-top: 4px solid #0B49B5;">
                 <div class="metric-title">👥 COMBINED PASSENGER</div>
                 <div class="metric-value">₹ {format_inr(curr)}</div>
                 <div class="metric-sub">Pass: {format_plain_number(pass_val)} | P/Day: {format_plain_number(pass_per_day)}</div>
