@@ -17,7 +17,6 @@ st.set_page_config(
 )
 
 # ----------------- SECURE DATABASE CREDENTIALS -----------------
-# Fallback to direct port 5432 or pooler 6543
 DEFAULT_DB_URL = "postgresql+psycopg2://postgres.ggrpypensvabbvpyzqbx:2234723pamcell@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 SUPABASE_URL = st.secrets.get("SUPABASE_URL", DEFAULT_DB_URL).strip()
 
@@ -113,7 +112,7 @@ def verify_user(username, password):
     except Exception as e:
         return False, "ERROR", str(e)
 
-# ----------------- ADVANCED ROBOTO TYPOGRAPHY & CSS FIXES -----------------
+# ----------------- ADVANCED ROBOTO TYPOGRAPHY & PROFESSIONAL CSS FIXES -----------------
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,400&display=swap');
@@ -150,13 +149,26 @@ st.markdown("""
             font-family: 'Roboto', sans-serif !important;
         }
 
-        /* LOGIN FORM PASSWORD ICON VISIBILITY FIX */
-        div[data-testid="stTextInput"] input {
-            padding-right: 2.5rem !important;
-        }
+        /* ----- EYE ICON FOR PASSWORD VISIBILITY TOGGLE ----- */
+        div[data-testid="stTextInput"] div[role="button"],
+        div[data-testid="stTextInput"] button[aria-label*="password"],
         div[data-testid="stTextInput"] button {
-            right: 0.5rem !important;
-            min-width: unset !important;
+            font-size: 0 !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 8px !important;
+            cursor: pointer !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        div[data-testid="stTextInput"] div[role="button"]::after,
+        div[data-testid="stTextInput"] button[aria-label*="password"]::after,
+        div[data-testid="stTextInput"] button::after {
+            content: "👁️" !important;
+            font-size: 1.1rem !important;
+            visibility: visible !important;
         }
 
         .main-title {
@@ -376,7 +388,7 @@ if "username" not in st.session_state:
 
 if not st.session_state.authenticated:
     st.markdown("<h2 style='text-align: center; color: var(--text-main); font-weight:800; font-family: Roboto;'>🚄 Railway Earning Dashboard Access</h2>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([0.8, 1.4, 0.8])
+    col1, col2, col3 = st.columns([0.6, 1.8, 0.6])
     with col2:
         auth_mode = st.radio("Choose Option", ["Login", "Sign Up / Reset Account Password"], horizontal=True)
         if auth_mode == "Login":
@@ -635,7 +647,6 @@ QUARTERS = {
     'Q4 (Jan-Mar)': ['Jan', 'Feb', 'Mar']
 }
 
-# Dynamic Previous Month Calculation
 now = datetime.now()
 current_month_num = now.month
 prev_month_num = 12 if current_month_num == 1 else current_month_num - 1
@@ -658,7 +669,6 @@ try:
 except Exception as e:
     st.error(f"Error loading stations: {e}"); st.stop()
 
-# Multi-Station Selection for Total Earning Summary Tab
 selected_multi_stations = st.sidebar.multiselect("Select Multiple Stations (Summary Tab)", stns, default=stns[:5] if len(stns) >= 5 else stns)
 
 # Fast Cached Session Select
