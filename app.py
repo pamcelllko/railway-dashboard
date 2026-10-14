@@ -112,10 +112,10 @@ def verify_user(username, password):
     except Exception as e:
         return False, "ERROR", str(e)
 
-# ----------------- ADVANCED ROBOTO TYPOGRAPHY & PERFECT CENTERED EYE ICON CSS -----------------
+# ----------------- ADVANCED ROBOTO TYPOGRAPHY & MODERN LOGIN CSS -----------------
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@300;400;500;700;900&display=swap');
         
         :root {
             --bg-card: #ffffff;
@@ -126,46 +126,192 @@ st.markdown("""
             --table-header-bg: #f1f5f9;
         }
 
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg-card: #1e293b;
-                --border-card: #334155;
-                --text-main: #f8fafc;
-                --text-sub: #cbd5e1;
-                --text-muted: #94a3b8;
-                --table-header-bg: #0f172a;
-            }
-        }
-
         .block-container { 
-            padding-top: 2.2rem !important; 
-            padding-bottom: 1rem !important;
-            padding-left: 1.2rem !important;
-            padding-right: 1.2rem !important;
+            padding: 0rem !important;
             max-width: 100% !important;
         }
         
         html, body, [class*="css"], h1, h2, h3, h4, h5, h6, div, span, p {
-            font-family: 'Roboto', sans-serif !important;
+            font-family: 'Plus Jakarta Sans', 'Roboto', sans-serif !important;
         }
 
-        /* ----- PERFECT VERTICAL CENTERING OF EYE ICON IN INPUT BAR ----- */
-        div[data-testid="stTextInput"] > div {
+        /* FULL PAGE CONTAINER SPLIT SCREEN */
+        .login-split-container {
+            display: flex;
+            min-height: 100vh;
+            width: 100vw;
+            background-color: #f8fafc;
+            overflow: hidden;
+        }
+
+        .login-left-banner {
+            flex: 1;
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%);
+            position: relative;
+            padding: 3rem 4rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+        }
+
+        .login-left-banner::before {
+            content: "";
+            position: absolute;
+            top: -100px;
+            left: -100px;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: rgba(147, 197, 253, 0.4);
+            z-index: 1;
+        }
+
+        .banner-header {
+            position: relative;
+            z-index: 2;
+        }
+
+        .banner-logo-title {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.2;
+            margin-bottom: 12px;
+        }
+
+        .banner-subtext {
+            font-size: 1.05rem;
+            color: #334155;
+            font-weight: 500;
+            max-width: 480px;
+            margin-bottom: 2rem;
+        }
+
+        .banner-features {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 2rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .feature-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            width: 110px;
+        }
+
+        .feature-icon-circle {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+            font-size: 1.3rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .feature-text {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #1e293b;
+            line-height: 1.25;
+        }
+
+        .banner-hero-img {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            object-fit: cover;
+            max-height: 380px;
+        }
+
+        /* RIGHT FORM PANEL */
+        .login-right-panel {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            background-color: #f8fafc;
+        }
+
+        .login-card-box {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 2.8rem 3rem;
+            width: 100%;
+            max-width: 460px;
+            box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
+            border: 1px solid #f1f5f9;
+        }
+
+        .card-top-icon {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-welcome-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #0f172a;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .card-welcome-sub {
+            font-size: 0.92rem;
+            color: #64748b;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        /* CUSTOM STREAMLIT INPUT OVERRIDES */
+        div[data-testid="stTextInput"] label {
+            font-weight: 600 !important;
+            color: #1e293b !important;
+            font-size: 0.9rem !important;
+            margin-bottom: 6px !important;
+        }
+
+        div[data-testid="stTextInput"] input {
+            border-radius: 10px !important;
+            border: 1px solid #e2e8f0 !important;
+            padding: 10px 14px 10px 38px !important;
+            font-size: 0.92rem !important;
+            background-color: #ffffff !important;
+        }
+
+        div[data-testid="stTextInput"] input:focus {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+        }
+
+        /* PERFECT EYE TOGGLE BUTTON POSITIONING */
+        div[data-testid="stTextInput"] {
             position: relative !important;
-            display: flex !important;
-            align-items: center !important;
         }
 
         div[data-testid="stTextInput"] button[aria-label*="password"],
         div[data-testid="stTextInput"] button {
             position: absolute !important;
             right: 12px !important;
-            top: 50% !important;
+            top: 68% !important;
             transform: translateY(-50%) !important;
             width: 22px !important;
             height: 22px !important;
             background-color: transparent !important;
-            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%23334155'><path d='M256 128c-106 0-200 64-240 128 40 64 134 128 240 128s200-64 240-128c-40-64-134-128-240-128zm0 208c-44.2 0-80-35.8-80-80s35.8-80 80-80 80 35.8 80 80-35.8 80-80 80zm0-128c-26.5 0-48 21.5-48 48s21.5 48 48 48 48-21.5 48-48-21.5-48-48-48z'/><path d='M100 80l40 30M200 50l10 50M310 50l-10 50M410 80l-40 30' stroke='%23334155' stroke-width='28' stroke-linecap='round'/></svg>") !important;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%2364748b'><path d='M256 128c-106 0-200 64-240 128 40 64 134 128 240 128s200-64 240-128c-40-64-134-128-240-128zm0 208c-44.2 0-80-35.8-80-80s35.8-80 80-80 80 35.8 80 80-35.8 80-80 80zm0-128c-26.5 0-48 21.5-48 48s21.5 48 48 48 48-21.5 48-48-21.5-48-48-48z'/><path d='M100 80l40 30M200 50l10 50M310 50l-10 50M410 80l-40 30' stroke='%2364748b' stroke-width='28' stroke-linecap='round'/></svg>") !important;
             background-repeat: no-repeat !important;
             background-position: center !important;
             background-size: contain !important;
@@ -174,16 +320,43 @@ st.markdown("""
             padding: 0 !important;
             margin: 0 !important;
             cursor: pointer !important;
-            overflow: hidden !important;
-            color: transparent !important;
-            font-size: 0 !important;
             z-index: 10 !important;
+            font-size: 0 !important;
         }
 
         div[data-testid="stTextInput"] button * {
             display: none !important;
         }
 
+        /* BLUE LOGIN BUTTON */
+        div[data-testid="stForm"] button[kind="primary"],
+        div[data-testid="stForm"] button {
+            background-color: #0d47a1 !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            font-size: 1.05rem !important;
+            border-radius: 10px !important;
+            padding: 12px 0 !important;
+            border: none !important;
+            box-shadow: 0 4px 12px rgba(13, 71, 161, 0.25) !important;
+            transition: all 0.2s ease !important;
+            width: 100% !important;
+        }
+
+        div[data-testid="stForm"] button:hover {
+            background-color: #1565c0 !important;
+            box-shadow: 0 6px 16px rgba(21, 101, 192, 0.35) !important;
+            transform: translateY(-1px) !important;
+        }
+
+        .card-footer-text {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 1.8rem;
+        }
+        
+        /* DASHBOARD CONTENT CSS */
         .main-title {
             font-family: 'Roboto', sans-serif !important;
             font-size: 1.45rem !important;
@@ -212,7 +385,6 @@ st.markdown("""
             border-radius: 6px;
             border: 1px solid #bfdbfe;
             display: inline-block;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
         }
         .highlight-badge {
             background-color: #1e3a8a;
@@ -230,7 +402,6 @@ st.markdown("""
             padding: 7px 16px;
             border-radius: 8px;
             border: 1px solid var(--border-card);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
             display: inline-block;
         }
 
@@ -246,108 +417,67 @@ st.markdown("""
             flex-direction: column;
             justify-content: space-between;
             align-items: center;
-            transition: transform 0.15s ease;
-        }
-        .metric-card:hover {
-            transform: translateY(-2px);
         }
         .metric-title {
-            font-family: 'Roboto', sans-serif !important;
             font-size: 0.75rem;
             font-weight: 700;
             color: var(--text-sub);
             text-transform: uppercase;
-            letter-spacing: 0.3px;
         }
         .metric-value {
-            font-family: 'Roboto', sans-serif !important;
             font-size: 1.22rem;
             font-weight: 900;
             color: var(--text-main);
-            letter-spacing: -0.5px;
             margin: 2px 0;
         }
         .metric-sub {
-            font-family: 'Roboto', sans-serif !important;
             font-size: 0.72rem;
             color: var(--text-muted);
             font-weight: 500;
         }
         .metric-delta-pos {
-            font-family: 'Roboto', sans-serif !important;
             font-size: 0.75rem !important;
             font-weight: 700 !important;
             color: #15803d !important;
             background-color: #dcfce7 !important;
             padding: 2px 10px !important;
             border-radius: 20px !important;
-            border: 1px solid #16a34a !important;
         }
         .metric-delta-neg {
-            font-family: 'Roboto', sans-serif !important;
             font-size: 0.75rem !important;
             font-weight: 700 !important;
             color: #b91c1c !important;
             background-color: #fee2e2 !important;
             padding: 2px 10px !important;
             border-radius: 20px !important;
-            border: 1px solid #ef4444 !important;
         }
 
-        /* CAPSULE / PILL TABS DESIGN WITH SAFE PADDING */
         .stTabs [data-baseweb="tab-list"] {
             gap: 10px !important;
             border-bottom: 2px solid #e2e8f0 !important;
             margin-bottom: 16px !important;
-            padding-bottom: 2px !important;
-            flex-wrap: nowrap !important;
-            overflow-x: auto !important;
         }
         .stTabs [data-baseweb="tab"] {
-            font-family: 'Roboto', sans-serif !important;
             height: auto !important;
-            min-height: 38px !important;
             padding: 6px 18px !important;
             font-weight: 500 !important;
             font-size: 0.92rem !important;
             border-radius: 25px !important;
             color: #555555 !important;
             background-color: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            white-space: nowrap !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            transition: all 0.15s ease-in-out !important;
-        }
-        .stTabs [data-baseweb="tab"]:hover {
-            color: #0073ea !important;
-            background-color: #f1f5f9 !important;
         }
         .stTabs [aria-selected="true"] {
             background-color: #0073ea !important;
             color: #ffffff !important;
             font-weight: 700 !important;
-            border-radius: 25px !important;
-            padding: 6px 18px !important;
-            box-shadow: 0 2px 6px rgba(0, 115, 234, 0.3) !important;
-        }
-        .stTabs [data-baseweb="tab-highlight-title"] {
-            background-color: #ff0000 !important;
-            height: 3px !important;
-            border-radius: 2px !important;
         }
 
-        /* CUSTOM HTML TABLE CENTRALIZE CSS */
         .custom-dashboard-table {
             width: 100%;
             border-collapse: collapse;
-            font-family: 'Roboto', sans-serif !important;
             font-size: 0.85rem;
             margin-top: 8px;
             background-color: var(--bg-card);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             border-radius: 8px;
             overflow: hidden;
             border: 1px solid var(--border-card);
@@ -357,23 +487,14 @@ st.markdown("""
             color: #475569 !important;
             font-weight: 700 !important;
             text-align: center !important;
-            vertical-align: middle !important;
             padding: 10px 14px !important;
             border: 1px solid #e2e8f0 !important;
         }
         .custom-dashboard-table td {
             text-align: center !important;
-            vertical-align: middle !important;
             padding: 9px 12px !important;
             border: 1px solid #e2e8f0 !important;
             color: var(--text-main) !important;
-        }
-        .custom-dashboard-table tr:hover {
-            background-color: #f8fafc;
-        }
-        .custom-dashboard-table tr.total-row {
-            font-weight: 800 !important;
-            background-color: #f8fafc !important;
         }
         .custom-dashboard-table tr.total-row td {
             font-weight: 800 !important;
@@ -393,23 +514,77 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ----------------- LOGIN PAGE -----------------
+# ----------------- LOGIN PAGE (EXACT IMAGE REPLICA) -----------------
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "username" not in st.session_state:
     st.session_state.username = ""
 
 if not st.session_state.authenticated:
-    st.markdown("<h2 style='text-align: center; color: var(--text-main); font-weight:800; font-family: Roboto;'>🚄 Railway Earning Dashboard Access</h2>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([0.6, 1.8, 0.6])
-    with col2:
-        auth_mode = st.radio("Choose Option", ["Login", "Sign Up / Reset Account Password"], horizontal=True)
+    # 50/50 Columns for Split Design
+    col_left, col_right = st.columns([1, 1], gap="none")
+    
+    with col_left:
+        st.markdown('''
+            <div class="login-left-banner">
+                <div class="banner-header">
+                    <div class="banner-logo-title">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="#1d4ed8"><path d="M12 2c-4 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h12v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-4-4-8-4zm0 2c3.71 0 5.8 0 6 2H6c.2-2 2.29-2 6-2zm-5 6.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm10 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm-5 6.5c-2.76 0-5-1.12-5-2.5h10c0 1.38-2.24 2.5-5 2.5z"/></svg>
+                        <div>
+                            Railway Earning<br>Dashboard Access
+                        </div>
+                    </div>
+                    <div class="banner-subtext">
+                        Track your earnings, manage your account and stay connected with the railway ecosystem.
+                    </div>
+                </div>
+                
+                <div class="banner-features">
+                    <div class="feature-item">
+                        <div class="feature-icon-circle" style="background-color: #dbeafe; color: #2563eb;">📊</div>
+                        <div class="feature-text">View Earnings Reports</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon-circle" style="background-color: #dcfce7; color: #16a34a;">🛡️</div>
+                        <div class="feature-text">Secure & Reliable Access</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon-circle" style="background-color: #f3e8ff; color: #9333ea;">👤</div>
+                        <div class="feature-text">Manage Your Account</div>
+                    </div>
+                </div>
+                
+                <div>
+                    <img src="https://images.unsplash.com/photo-1532105956626-9569c03602f6?q=80&w=1000&auto=format&fit=crop" class="banner-hero-img" alt="Vande Bharat Train">
+                </div>
+            </div>
+        ''', unsafe_allow_html=True)
+
+    with col_right:
+        st.markdown('<div class="login-right-panel">', unsafe_allow_html=True)
+        
+        auth_mode = st.radio("Access Mode", ["Login", "Sign Up / Reset Password"], horizontal=True, label_visibility="collapsed")
+        
         if auth_mode == "Login":
-            st.subheader("🔑 User Login")
+            st.markdown('''
+                <div class="card-top-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="#1d4ed8"><path d="M12 2c-4 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h12v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-4-4-8-4zm0 2c3.71 0 5.8 0 6 2H6c.2-2 2.29-2 6-2zm-5 6.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm10 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5-1.5zm-5 6.5c-2.76 0-5-1.12-5-2.5h10c0 1.38-2.24 2.5-5 2.5z"/></svg>
+                </div>
+                <div class="card-welcome-title">Welcome Back</div>
+                <div class="card-welcome-sub">Login to your Railway Earning Dashboard to continue</div>
+            ''', unsafe_allow_html=True)
+            
             with st.form("login_form"):
-                u_in = st.text_input("Username").strip()
-                p_in = st.text_input("Password", type="password").strip()
-                submit_login = st.form_submit_button("Login to Dashboard", use_container_width=True)
+                u_in = st.text_input("Username", placeholder="Enter your username").strip()
+                p_in = st.text_input("Password", type="password", placeholder="Enter your password").strip()
+                
+                c_rem, c_forgot = st.columns([1, 1])
+                with c_rem:
+                    remember_me = st.checkbox("Remember me", value=True)
+                with c_forgot:
+                    st.markdown("<div style='text-align:right; font-size:0.85rem; padding-top:4px;'><a href='#' style='color:#2563eb; text-decoration:none; font-weight:600;'>Reset Password</a></div>", unsafe_allow_html=True)
+                
+                submit_login = st.form_submit_button("Login  →")
                 
                 if submit_login:
                     valid, status, msg = verify_user(u_in, p_in)
@@ -419,23 +594,28 @@ if not st.session_state.authenticated:
                         st.success("Login Successful!")
                         st.rerun()
                     elif valid and status == 'PENDING':
-                        st.warning(f"⚠️ Account '{u_in}' is PENDING approval. Please re-register in Sign Up option to approve immediately.")
+                        st.warning(f"⚠️ Account '{u_in}' is PENDING approval. Reset in Sign Up option.")
                     elif status == "INVALID_PASSWORD":
-                        st.error("Incorrect Password! If you forgot password, reset it using the Sign Up option.")
+                        st.error("Incorrect Password! Reset it using 'Sign Up / Reset Password'.")
                     elif status == "USER_NOT_FOUND":
-                        st.error("Username does not exist. Please create an account in Sign Up.")
+                        st.error("Username does not exist.")
                     else:
                         st.error(f"Login failed: {msg}")
                         
+            st.markdown('<div class="card-footer-text">Not a member? Contact your administrator</div>', unsafe_allow_html=True)
+            
         else:
-            st.subheader("📝 Create / Reset Account")
-            st.caption("Enter username & new password. If user exists, password will be reset and APPROVED automatically.")
+            st.markdown('''
+                <div class="card-welcome-title">Create / Reset Account</div>
+                <div class="card-welcome-sub">Enter credentials to register or reset password automatically</div>
+            ''', unsafe_allow_html=True)
+            
             with st.form("signup_form"):
-                nu = st.text_input("Choose / Existing Username").strip()
-                np = st.text_input("Choose Password", type="password").strip()
-                cp = st.text_input("Confirm Password", type="password").strip()
+                nu = st.text_input("Username", placeholder="Choose or enter existing username").strip()
+                np = st.text_input("New Password", type="password", placeholder="Enter new password").strip()
+                cp = st.text_input("Confirm Password", type="password", placeholder="Confirm new password").strip()
                 
-                if st.form_submit_button("Register / Update Password", use_container_width=True):
+                if st.form_submit_button("Register / Reset Password  →"):
                     if not nu or not np:
                         st.error("Username and Password cannot be empty!")
                     elif np != cp:
@@ -443,9 +623,11 @@ if not st.session_state.authenticated:
                     else:
                         ok, res_status = create_or_update_user(nu, np, auto_approve=True)
                         if ok:
-                            st.success(f"✅ Account '{nu}' created/updated and APPROVED! You can now login directly.")
+                            st.success(f"✅ Account '{nu}' created/updated & APPROVED! You can login now.")
                         else:
                             st.error(f"❌ Error updating account: {res_status}")
+
+        st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
 # ----------------- HELPER FUNCTIONS -----------------
@@ -520,7 +702,7 @@ def fetch_station_details(station_code):
                 matched = df_stn[df_stn[code_col].astype(str).str.strip().str.upper() == station_code.strip().upper()]
                 if not matched.empty:
                     r = matched.iloc[0]
-                    row_map = {str(k).upper().replace('_', '').replace(' ', '').strip(): v for k, v in r.items()}
+                    row_map = {str(k).upper().replace('_', '').replace(' ", "").strip(): v for k, v in r.items()}
                     return (
                         row_map.get('STATIONNAME', row_map.get('STNAME', '')),
                         row_map.get('CATEGORY', row_map.get('CAT', '')),
