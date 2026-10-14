@@ -18,9 +18,6 @@ st.set_page_config(
 DEFAULT_DB_URL = "postgresql+psycopg2://postgres.ggrpypensvabbvpyzqbx:2234723pamcell@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
 SUPABASE_URL = st.secrets.get("SUPABASE_URL", DEFAULT_DB_URL).strip()
 
-ADMIN_NAME = "Mohammed Rafik"
-ADMIN_EMAIL = "adilrafeeque@gmail.com"
-
 @st.cache_resource
 def get_database_connection():
     return create_engine(
@@ -43,22 +40,6 @@ def keep_db_alive():
         pass
 
 keep_db_alive()
-
-# ----------------- IMAGE & TRAIN LOGO ENCODING -----------------
-def get_train_logo_html():
-    img_path = "transport.png"
-    if os.path.exists(img_path):
-        try:
-            with open(img_path, "rb") as image_file:
-                encoded = base64.b64encode(image_file.read()).decode()
-            return f'<img src="data:image/png;base64,{encoded}" style="width:38px; height:38px; vertical-align:middle; margin-right:8px;">'
-        except Exception: pass
-    
-    return """
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="36" height="36" style="vertical-align: middle; fill: #0B49B5; margin-right:8px;">
-      <path d="M480 384c0 13.255-10.745 24-24 24H56c-13.255 0-24-10.745-24-24s10.745-24 24-24h400c13.255 0 24 10.745 24 24zM88 320l-48 96h432l-48-96H88zm320-192c0-35.346-28.654-64-64-64H168c-35.346 0-64 28.654-64 64v160h304V128zm-224 0h144v48H184v-48z"/>
-    </svg>
-    """
 
 # ----------------- SUPABASE AUTH DB -----------------
 def init_supabase_auth_db():
@@ -108,113 +89,112 @@ def verify_user(username, password):
     except Exception as e:
         return False, "ERROR", str(e)
 
-# ----------------- GLOBAL STYLES & DASHBOARD STYLING -----------------
+# ----------------- GLOBAL STYLES & LAYOUT FIXES -----------------
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto:wght@300;400;500;700;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     
     :root {
-        --primary: #0B49B5;
-        --secondary: #17366F;
-        --background: #F4F8FD;
-        --cardBackground: #FFFFFF;
-        --textColor: #10234B;
-        --mutedText: #526987;
-        --borderColor: #DCE4EF;
-        --borderRadius: 16px;
+        --navy: #10234b;
+        --blue: #0b49b5;
+        --muted: #60728f;
+        --line: #dce4ef;
+        --pale: #f4f8fd;
     }
 
+    /* TOP CONTAINER PADDING FIX TO PREVENT TITLE CUTTING */
     .block-container { 
-        padding-top: 1.8rem !important;
-        padding-bottom: 1rem !important;
-        padding-left: 1.5rem !important;
-        padding-right: 1.5rem !important;
+        padding-top: 3.5rem !important;
+        padding-bottom: 1.5rem !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
         max-width: 100% !important;
     }
     
     html, body, [class*="css"] {
-        font-family: 'Inter', 'Roboto', sans-serif !important;
+        font-family: 'Inter', sans-serif !important;
+        background-color: #f4f7fc !important;
     }
 
     div[data-testid="stTextInput"] label {
-        font-weight: 600 !important;
-        color: #10234B !important;
-        font-size: 0.9rem !important;
+        font-weight: 700 !important;
+        color: var(--navy) !important;
+        font-size: 0.88rem !important;
     }
 
     div[data-testid="stTextInput"] input {
         border-radius: 10px !important;
-        border: 1px solid #DCE4EF !important;
+        border: 1px solid var(--line) !important;
         padding: 10px 14px !important;
         font-size: 0.92rem !important;
     }
 
     div[data-testid="stForm"] button {
-        background-color: #0B49B5 !important;
+        background: linear-gradient(100deg, #0b49b5, #1763d3) !important;
         color: #ffffff !important;
         font-weight: 700 !important;
-        font-size: 1rem !important;
+        font-size: 0.95rem !important;
         border-radius: 10px !important;
         padding: 10px 0 !important;
         border: none !important;
         width: 100% !important;
-        box-shadow: 0 4px 12px rgba(11, 73, 181, 0.22) !important;
+        box-shadow: 0 8px 18px rgba(11, 73, 181, 0.20) !important;
     }
 
-    div[data-testid="stForm"] button:hover {
-        background-color: #17366F !important;
-    }
-
-    /* DASHBOARD HEADERS & METRIC CARDS */
+    /* DASHBOARD TITLE & METRIC CARDS */
     .main-title {
-        font-size: 1.45rem !important;
-        font-weight: 900 !important;
-        color: var(--textColor) !important;
+        font-size: 1.4rem !important;
+        font-weight: 800 !important;
+        color: var(--navy) !important;
+        letter-spacing: -0.5px;
         display: flex;
         align-items: center;
+        margin-top: 0px !important;
+        padding-top: 0px !important;
     }
     .station-subtitle {
-        font-size: 0.9rem !important;
-        color: var(--mutedText) !important;
+        font-size: 0.88rem !important;
+        color: var(--muted) !important;
         font-weight: 500 !important;
         margin-top: 4px !important;
     }
     .station-meta-info {
-        font-size: 0.85rem !important;
-        color: var(--primary) !important;
+        font-size: 0.82rem !important;
+        color: var(--blue) !important;
         font-weight: 700 !important;
         margin-top: 6px !important;
-        background-color: #eff6ff;
+        background-color: #d7e9ff;
         padding: 5px 12px;
         border-radius: 6px;
-        border: 1px solid #bfdbfe;
+        border: 1px solid #bfe5ff;
         display: inline-block;
     }
     .highlight-badge {
-        background-color: var(--secondary);
+        background-color: var(--navy);
         color: #ffffff !important;
         padding: 2px 8px;
         border-radius: 5px;
         font-weight: 700;
     }
     .days-badge {
-        font-size: 0.85rem;
+        font-size: 0.82rem;
         font-weight: 700;
-        background-color: var(--cardBackground);
-        color: var(--textColor);
-        padding: 7px 16px;
+        background-color: #ffffff;
+        color: var(--navy);
+        padding: 7px 14px;
         border-radius: 8px;
-        border: 1px solid var(--borderColor);
+        border: 1px solid var(--line);
         display: inline-block;
+        margin-top: 2px;
     }
 
     .metric-card {
-        background: var(--cardBackground);
-        border: 1px solid var(--borderColor);
-        border-radius: 10px;
-        padding: 12px 8px;
+        background: #ffffff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px 10px;
         text-align: center !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 12px rgba(35, 70, 120, 0.05);
         min-height: 142px !important;
         display: flex;
         flex-direction: column;
@@ -222,35 +202,35 @@ st.markdown("""
         align-items: center;
     }
     .metric-title {
-        font-size: 0.75rem;
+        font-size: 0.72rem;
         font-weight: 700;
-        color: var(--mutedText);
+        color: var(--muted);
         text-transform: uppercase;
     }
     .metric-value {
-        font-size: 1.22rem;
-        font-weight: 900;
-        color: var(--textColor);
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: var(--navy);
         margin: 2px 0;
     }
     .metric-sub {
         font-size: 0.72rem;
-        color: var(--mutedText);
+        color: var(--muted);
         font-weight: 500;
     }
     .metric-delta-pos {
         font-size: 0.75rem !important;
         font-weight: 700 !important;
-        color: #15803d !important;
-        background-color: #dcfce7 !important;
+        color: #0ba889 !important;
+        background-color: #d5f4eb !important;
         padding: 2px 10px !important;
         border-radius: 20px !important;
     }
     .metric-delta-neg {
         font-size: 0.75rem !important;
         font-weight: 700 !important;
-        color: #b91c1c !important;
-        background-color: #fee2e2 !important;
+        color: #c43d4b !important;
+        background-color: #fde8ea !important;
         padding: 2px 10px !important;
         border-radius: 20px !important;
     }
@@ -261,36 +241,36 @@ st.markdown("""
         border-collapse: collapse;
         font-size: 0.85rem;
         margin-top: 8px;
-        background-color: var(--cardBackground);
+        background-color: #ffffff;
         border-radius: 8px;
         overflow: hidden;
-        border: 1px solid var(--borderColor);
+        border: 1px solid var(--line);
     }
     .custom-dashboard-table th {
-        background-color: #f1f5f9 !important;
-        color: #475569 !important;
+        background-color: #f4f8fd !important;
+        color: var(--navy) !important;
         font-weight: 700 !important;
         text-align: center !important;
         padding: 10px 14px !important;
-        border: 1px solid var(--borderColor) !important;
+        border: 1px solid var(--line) !important;
     }
     .custom-dashboard-table td {
         text-align: center !important;
         padding: 9px 12px !important;
-        border: 1px solid var(--borderColor) !important;
-        color: var(--textColor) !important;
+        border: 1px solid var(--line) !important;
+        color: var(--navy) !important;
     }
     .custom-dashboard-table tr.total-row td {
         font-weight: 800 !important;
-        border-top: 2px solid #cbd5e1 !important;
+        border-top: 2px solid #aac5df !important;
     }
     .period-info-box {
-        background-color: #eff6ff;
-        border: 1px solid #bfdbfe;
-        color: #1e40af;
+        background-color: #eff7ff;
+        border: 1px solid #bfe5ff;
+        color: var(--blue);
         padding: 8px 16px;
         border-radius: 8px;
-        font-size: 0.9rem;
+        font-size: 0.88rem;
         font-weight: 700;
         margin-bottom: 12px;
         text-align: center;
@@ -305,34 +285,37 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 
 if not st.session_state.authenticated:
-    col_left, col_right = st.columns([1.1, 0.9], gap="large")
+    col_left, col_right = st.columns([1.05, 0.95], gap="large")
     
     with col_left:
         banner_html = """
-        <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 50%, #93c5fd 100%); padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 25px rgba(11, 73, 181, 0.08);">
+        <div style="background: linear-gradient(145deg,#eff7ff 0%,#d9ebff 52%,#f8fbff 100%); padding: 2.2rem; border-radius: 22px; border: 1px solid #dce4ef; box-shadow: 0 10px 25px rgba(35, 70, 120, 0.05);">
             <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="#0B49B5"><path d="M12 2c-4 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h12v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-4-4-8-4zm0 2c3.71 0 5.8 0 6 2H6c.2-2 2.29-2 6-2zm-5 6.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm10 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5-1.5zm-5 6.5c-2.76 0-5-1.12-5-2.5h10c0 1.38-2.24 2.5-5 2.5z"/></svg>
-                <div style="font-size: 1.85rem; font-weight: 800; color: #10234B; line-height: 1.2;">Railway Earning<br>Dashboard Access</div>
-            </div>
-            <div style="font-size: 0.95rem; color: #526987; font-weight: 500; margin-bottom: 2rem;">
-                Track your earnings, manage your account and stay connected with the railway ecosystem.
-            </div>
-            <div style="display: flex; gap: 16px; margin-bottom: 2rem; text-align: center;">
-                <div style="flex: 1;">
-                    <div style="width: 48px; height: 48px; border-radius: 50%; background: #dbeafe; color: #0B49B5; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px auto; font-size: 1.2rem; font-weight: bold;">📊</div>
-                    <div style="font-size: 0.8rem; font-weight: 600; color: #10234B;">View Earnings Reports</div>
+                <svg viewBox="0 0 64 64" width="48" height="48"><rect x="13" y="8" width="38" height="43" rx="11" fill="#1464D8"/><rect x="20" y="15" width="24" height="14" rx="3" fill="#BFE5FF"/><path d="M32 15v14M20 22h24" stroke="#1464D8" stroke-width="2"/><circle cx="22" cy="38" r="3.5" fill="#fff"/><circle cx="42" cy="38" r="3.5" fill="#fff"/><path d="M20 51l-5 7m29-7 5 7M24 52h16M21 57h22" stroke="#172C70" stroke-width="3" stroke-linecap="round"/><rect x="25" y="4" width="14" height="5" rx="2" fill="#172C70"/></svg>
+                <div>
+                    <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.5px; color: #4774b5;">SMART RAILWAY TOOLS</div>
+                    <div style="font-size: 1.75rem; font-weight: 800; color: #10234b; line-height: 1.18;">Railway Earning<br>Dashboard Access</div>
                 </div>
-                <div style="flex: 1;">
-                    <div style="width: 48px; height: 48px; border-radius: 50%; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px auto; font-size: 1.2rem; font-weight: bold;">🛡️</div>
-                    <div style="font-size: 0.8rem; font-weight: 600; color: #10234B;">Secure & Reliable Access</div>
+            </div>
+            <div style="font-size: 0.92rem; color: #4f6688; font-weight: 500; margin-bottom: 1.8rem; max-width: 440px;">
+                Track your earnings, manage your account, and stay connected with the railway ecosystem.
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 1.8rem;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 38px; height: 38px; border-radius: 10px; background: #d7e9ff; color: #2879e6; display: flex; align-items: center; justify-content: center; font-weight: bold;">📊</div>
+                    <div><strong style="font-size: 13px; color: #10234b;">View Earnings Reports</strong><br><small style="color: #6a7f9e; font-size: 11px;">Clear, organized insights</small></div>
                 </div>
-                <div style="flex: 1;">
-                    <div style="width: 48px; height: 48px; border-radius: 50%; background: #f3e8ff; color: #9333ea; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px auto; font-size: 1.2rem; font-weight: bold;">👤</div>
-                    <div style="font-size: 0.8rem; font-weight: 600; color: #10234B;">Manage Your Account</div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 38px; height: 38px; border-radius: 10px; background: #d5f4eb; color: #0ba889; display: flex; align-items: center; justify-content: center; font-weight: bold;">🛡️</div>
+                    <div><strong style="font-size: 13px; color: #10234b;">Secure & Reliable Access</strong><br><small style="color: #6a7f9e; font-size: 11px;">Account-focused access</small></div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 38px; height: 38px; border-radius: 10px; background: #e8defe; color: #8251df; display: flex; align-items: center; justify-content: center; font-weight: bold;">👤</div>
+                    <div><strong style="font-size: 13px; color: #10234b;">Manage Your Account</strong><br><small style="color: #6a7f9e; font-size: 11px;">Your workspace in one place</small></div>
                 </div>
             </div>
             <div>
-                <img src="https://images.unsplash.com/photo-1532105956626-9569c03602f6?q=80&w=1000&auto=format&fit=crop" style="width: 100%; border-radius: 12px; box-shadow: 0 10px 25px rgba(16, 35, 75, 0.15); max-height: 320px; object-fit: cover;" alt="Train Image">
+                <img src="https://images.unsplash.com/photo-1532105956626-9569c03602f6?q=80&w=1000&auto=format&fit=crop" style="width: 100%; border-radius: 14px; box-shadow: 0 10px 25px rgba(26,57,93,0.15); max-height: 280px; object-fit: cover;" alt="Train Image">
             </div>
         </div>
         """
@@ -342,10 +325,10 @@ if not st.session_state.authenticated:
         auth_mode = st.radio("Access Mode", ["Login", "Sign Up / Reset Password"], horizontal=True, label_visibility="collapsed")
         
         st.markdown("""
-        <div style="text-align: center; margin-top: 10px; margin-bottom: 15px;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 24 24" fill="#0B49B5"><path d="M12 2c-4 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h12v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-4-4-8-4zm0 2c3.71 0 5.8 0 6 2H6c.2-2 2.29-2 6-2zm-5 6.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm10 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5-1.5zm-5 6.5c-2.76 0-5-1.12-5-2.5h10c0 1.38-2.24 2.5-5 2.5z"/></svg>
-            <div style="font-size: 1.75rem; font-weight: 800; color: #10234B; margin-top: 6px;">Welcome Back</div>
-            <div style="font-size: 0.88rem; color: #526987;">Login to your Railway Earning Dashboard to continue</div>
+        <div style="text-align: left; margin-top: 10px; margin-bottom: 20px;">
+            <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.5px; color: #4774b5;">WELCOME BACK</div>
+            <div style="font-size: 1.65rem; font-weight: 800; color: #10234b; margin-top: 4px;">Sign in to your account</div>
+            <div style="font-size: 0.85rem; color: #60728f;">Enter your credentials to continue to the dashboard.</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -358,9 +341,9 @@ if not st.session_state.authenticated:
                 with c_rem:
                     remember_me = st.checkbox("Remember me", value=True)
                 with c_forgot:
-                    st.markdown("<div style='text-align:right; font-size:0.85rem; padding-top:4px;'><a href='#' style='color:#0B49B5; text-decoration:none; font-weight:600;'>Reset Password</a></div>", unsafe_allow_html=True)
+                    st.markdown("<div style='text-align:right; font-size:0.82rem; padding-top:4px;'><a href='#' style='color:#0752c7; text-decoration:none; font-weight:600;'>Reset password</a></div>", unsafe_allow_html=True)
                 
-                submit_login = st.form_submit_button("Login  →")
+                submit_login = st.form_submit_button("Login to Dashboard  →")
                 
                 if submit_login:
                     valid, status, msg = verify_user(u_in, p_in)
@@ -378,7 +361,7 @@ if not st.session_state.authenticated:
                     else:
                         st.error(f"Login failed: {msg}")
                         
-            st.markdown('<div style="text-align: center; font-size: 0.8rem; color: #526987; margin-top: 1.2rem;">Not a member? Contact your administrator</div>', unsafe_allow_html=True)
+            st.markdown('<div style="text-align: center; font-size: 0.8rem; color: #8998ad; margin-top: 1.5rem;">Need access? Contact your administrator.</div>', unsafe_allow_html=True)
             
         else:
             with st.form("signup_form"):
@@ -725,10 +708,10 @@ comb_ear_prev = b_ear_prev + p_ear_prev
 head_col1, head_col2 = st.columns([4, 1.1])
 
 with head_col1:
-    train_icon = get_train_logo_html()
+    train_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="34" height="34" style="vertical-align: middle; fill: #0b49b5; margin-right:8px;"><path d="M480 384c0 13.255-10.745 24-24 24H56c-13.255 0-24-10.745-24-24s10.745-24 24-24h400c13.255 0 24 10.745 24 24zM88 320l-48 96h432l-48-96H88zm320-192c0-35.346-28.654-64-64-64H168c-35.346 0-64 28.654-64 64v160h304V128zm-224 0h144v48H184v-48z"/></svg>"""
     st.markdown(f'''
         <div class="main-title">
-            {train_icon} STATION EARNING & TRAFFIC EXECUTIVE DASHBOARD
+            {train_svg} STATION EARNING & TRAFFIC EXECUTIVE DASHBOARD
         </div>
     ''', unsafe_allow_html=True)
     st.markdown(f'<div class="station-subtitle">Station: <span class="highlight-badge">{selected_station}</span> | Session: <b>{selected_fmt_session}</b> | {display_period_text}</div>', unsafe_allow_html=True)
@@ -738,7 +721,7 @@ with head_col1:
 with head_col2:
     st.markdown(f'<div class="days-badge">🗓️ <b>{total_days} Days Selected</b></div>', unsafe_allow_html=True)
 
-st.markdown("<hr style='margin: 8px 0 14px 0; border:none; border-bottom:1px solid #cbd5e1;'>", unsafe_allow_html=True)
+st.markdown("<hr style='margin: 10px 0 16px 0; border:none; border-bottom:1px solid #dce4ef;'>", unsafe_allow_html=True)
 
 # METRIC CARDS
 c1, c2, c3, c4, c5 = st.columns(5)
@@ -751,7 +734,7 @@ def render_centered_metric(col, title, curr, prev, days, is_combined=False, pass
     if is_combined:
         pass_per_day = pass_val / days if days > 0 else 0
         content = f"""
-            <div class="metric-card" style="border-top: 4px solid #0B49B5;">
+            <div class="metric-card" style="border-top: 4px solid #0b49b5;">
                 <div class="metric-title">👥 COMBINED PASSENGER</div>
                 <div class="metric-value">₹ {format_inr(curr)}</div>
                 <div class="metric-sub">Pass: {format_plain_number(pass_val)} | P/Day: {format_plain_number(pass_per_day)}</div>
@@ -777,7 +760,7 @@ render_centered_metric(c3, "PRS ORG EARNING", p_ear_curr, p_ear_prev, total_days
 render_centered_metric(c4, "GOODS FREIGHT", g_ear_curr, g_ear_prev, total_days)
 render_centered_metric(c5, "PARCEL FREIGHT", pr_ear_curr, pr_ear_prev, total_days)
 
-st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-bottom: 14px;'></div>", unsafe_allow_html=True)
 
 # TABS
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
@@ -808,6 +791,7 @@ def render_table_with_totals(df, title):
     if 'MONTH' in df.columns: total_row['MONTH'] = 'TOTAL'
     if 'Fmt Session' in df.columns: total_row['Fmt Session'] = 'ALL'
     if 'Station Code' in df.columns: total_row['Station Code'] = 'TOTAL'
+    if 'Remarks' in df.columns: total_row['Remarks'] = '-'
     
     df_totals = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
     df_totals.columns = [str(c).replace('_', ' ').title() for c in df_totals.columns]
@@ -822,6 +806,8 @@ def render_table_with_totals(df, title):
         else:
             if col in num_cols:
                 formatted_df[col] = formatted_df[col].apply(lambda x: format_plain_number(x) if pd.notna(x) else "0")
+            else:
+                formatted_df[col] = formatted_df[col].apply(lambda x: "-" if pd.isna(x) or str(x).lower() in ['nan', 'none'] else str(x))
 
     html_code = '<table class="custom-dashboard-table"><thead><tr>'
     for col in formatted_df.columns:
