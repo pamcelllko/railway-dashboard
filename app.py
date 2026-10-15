@@ -1,7 +1,7 @@
 
 # ----------------- LOGIN PAGE -----------------
 if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
+    st.session_state["authenticated"] = False
 
 if "username" not in st.session_state:
     st.session_state.username = ""
